@@ -104,10 +104,29 @@ enum SettingsWindow {
         }
     }
 
+    /// Clicking the menu bar icon brings an open Settings window forward when it's behind other
+    /// windows, minimized or on another Space.
+    static func bringForwardWhenMenuOpens() {
+        NotificationCenter.default.addObserver(forName: NSMenu.didBeginTrackingNotification, object: nil,
+                                               queue: .main) { _ in
+            MainActor.assumeIsolated {
+                // Pop-up menus inside Settings send this too; leave a window that's already in front alone.
+                guard let window = openWindow(), !(NSApp.isActive && window.isKeyWindow) else { return }
+                focus()
+            }
+        }
+    }
+
+    private static func openWindow() -> NSWindow? {
+        let candidates = NSApp.windows.filter {
+            ($0.isVisible || $0.isMiniaturized) && !($0 is NSPanel) && $0.styleMask.contains(.titled)
+        }
+        return candidates.first(where: { $0.identifier?.rawValue.contains("Settings") == true })
+            ?? candidates.first(where: { $0.title != L("Welcome to Strip") })
+    }
+
     private static func focus() {
-        let candidates = NSApp.windows.filter { $0.isVisible && !($0 is NSPanel) && $0.styleMask.contains(.titled) }
-        guard let window = candidates.first(where: { $0.identifier?.rawValue.contains("Settings") == true })
-            ?? candidates.first(where: { $0.title != L("Welcome to Strip") }) else { return }
+        guard let window = openWindow() else { return }
         window.collectionBehavior.insert(.moveToActiveSpace)
         if window.isMiniaturized { window.deminiaturize(nil) }
         NSApp.activate(ignoringOtherApps: true)

@@ -96,6 +96,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         Localization.use(settings.settings.language)
         Onboarding.configure(self)
+        SettingsWindow.bringForwardWhenMenuOpens()
         settings.onChange = { [weak self] new in
             Localization.use(new.language)
             self?.manager.settingsChanged()
