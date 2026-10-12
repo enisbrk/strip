@@ -14,6 +14,23 @@ REPO="enisbrk/strip"
 NOTES="${1:-Bug fixes and improvements.}"
 [[ -n "${NOTARY_PROFILE:-}" ]] || { echo "Set NOTARY_PROFILE; updates must be notarized." >&2; exit 1 }
 
+# Check everything a release needs before building anything.
+security find-identity -v -p codesigning | grep -q "Developer ID Application" || {
+  echo "No \"Developer ID Application\" certificate in the keychain." >&2
+  echo "Create one in Xcode → Settings → Accounts → Manage Certificates → + → Developer ID Application." >&2
+  exit 1
+}
+xcrun notarytool history --keychain-profile "$NOTARY_PROFILE" >/dev/null 2>&1 || {
+  echo "Notary profile \"$NOTARY_PROFILE\" not found or not valid. Create it with:" >&2
+  echo "  xcrun notarytool store-credentials $NOTARY_PROFILE --apple-id <apple-id> --team-id 2XYM3358P5 --password <app-specific-password>" >&2
+  exit 1
+}
+.build/artifacts/sparkle/Sparkle/bin/generate_keys -p >/dev/null 2>&1 || {
+  echo "Sparkle signing key not found in the login keychain (see README)." >&2
+  exit 1
+}
+command -v gh >/dev/null && gh auth status >/dev/null 2>&1 || { echo "Install and log in to gh (GitHub CLI)." >&2; exit 1 }
+
 scripts/make-dmg.sh
 
 PLIST=build/Strip.app/Contents/Info.plist
@@ -48,9 +65,5 @@ PY
 # The website shows the current version next to the download button.
 sed -i '' "s/^const VERSION = \".*\";/const VERSION = \"$VERSION\";/" ../assets/js/main.js
 
-if command -v gh >/dev/null; then
-  gh release create "v$VERSION" "$DMG" build/Strip.dmg --repo "$REPO" --title "Strip $VERSION" --notes "$NOTES"
-else
-  echo "gh not found: create release v$VERSION on GitHub and upload $DMG and build/Strip.dmg."
-fi
+gh release create "v$VERSION" "$DMG" build/Strip.dmg --repo "$REPO" --title "Strip $VERSION" --notes "$NOTES"
 echo "Released $VERSION ($BUILD). Commit and push appcast.xml and assets/js/main.js to publish the update."
