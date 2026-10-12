@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Strip — Scrolling window manager for macOS</title>
+  <meta name="description" content="Strip turns every window into a column on a horizontal strip that scrolls past the edges of your screen. Keyboard-first, trackpad-friendly, free for macOS 13+.">
+  <meta name="theme-color" content="#fff8ec">
+  <meta property="og:title" content="Strip — Windows side by side, not piled up">
+  <meta property="og:description" content="A scrolling, tiling window manager for macOS. Every window becomes a column on an endless strip.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="assets/img/icon.png">
+  <link rel="icon" type="image/png" href="assets/img/favicon.png">
+  <link rel="apple-touch-icon" href="assets/img/icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&display=swap">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <header class="nav">
+    <div class="nav__inner">
+      <a class="brand" href="#top" aria-label="Strip">
+        <img src="assets/img/icon.png" alt="" width="28" height="28">
+        <span>Strip</span>
+      </a>
+      <nav class="nav__links" aria-label="Sections">
+        <a href="#features" data-i18n="nav.features">Features</a>
+        <a href="#shortcuts" data-i18n="nav.shortcuts">Shortcuts</a>
+        <a href="#download" data-i18n="nav.download">Download</a>
+      </nav>
+      <div class="lang" role="group" aria-label="Language">
+        <button type="button" data-lang="en" aria-pressed="true">EN</button>
+        <button type="button" data-lang="tr" aria-pressed="false">TR</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="top">
+    <!-- Hero -->
+    <section class="hero">
+      <div class="blobs" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <div class="hero__copy">
+        <p class="eyebrow" data-i18n="hero.eyebrow">Scrolling window manager for macOS</p>
+        <h1 data-i18n="hero.title">Windows side by side, <em>not piled up.</em></h1>
+        <p class="lead" data-i18n="hero.lead">Strip turns every window into a column on a horizontal strip that runs past the edges of your screen. New windows open next to the focused one, the rest keep their size, and the strip scrolls just enough to show what you're working on.</p>
+        <div class="cta">
+          <a class="btn btn--primary js-download" href="#download">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.4 12.6c0-2.4 2-3.6 2.1-3.7-1.1-1.7-2.9-1.9-3.5-1.9-1.5-.2-2.9.9-3.7.9-.8 0-1.9-.9-3.2-.8-1.6 0-3.1 1-4 2.4-1.7 3-.4 7.4 1.2 9.8.8 1.2 1.8 2.5 3 2.4 1.2 0 1.7-.8 3.2-.8s1.9.8 3.2.8c1.3 0 2.2-1.2 3-2.4.9-1.4 1.3-2.7 1.3-2.8 0 0-2.6-1-2.6-3.9zM14 5.4c.7-.8 1.1-1.9 1-3-1 0-2.1.7-2.8 1.5-.6.7-1.2 1.8-1 2.9 1 .1 2.1-.6 2.8-1.4z"/></svg>
+            <span data-i18n="cta.download">Download for macOS</span>
+          </a>
+          <a class="btn btn--ghost" href="#features" data-i18n="cta.explore">See how it works</a>
+        </div>
+        <p class="fine" data-i18n="cta.fine">Free · macOS 13 Ventura or later · Apple silicon &amp; Intel</p>
+      </div>
+
+      <figure class="stage" aria-label="Animated demo of Strip arranging windows on a scrolling strip">
+        <div class="mac">
+          <div class="mac__screen" id="screen">
+            <div class="menubar">
+              <span class="menubar__apple"></span>
+              <span class="menubar__app" id="menubarApp">Safari</span>
+              <span class="menubar__spacer"></span>
+              <span class="menubar__icon" aria-hidden="true"><i></i><i></i><i></i></span>
+              <span class="menubar__clock">9:41</span>
+            </div>
+            <div class="wallpaper"></div>
+            <div class="strip" id="strip"></div>
+            <div class="hud" id="hud" aria-live="off">
+              <span class="hud__keys" id="hudKeys"></span>
+              <span class="hud__label" id="hudLabel"></span>
+            </div>
+            <div class="minimap" id="minimap"></div>
+          </div>
+        </div>
+        <div class="mac__foot"></div>
+        <span class="sticker sticker--1" aria-hidden="true"><kbd>⌃</kbd><kbd>⌥</kbd><kbd>L</kbd></span>
+        <span class="sticker sticker--2" aria-hidden="true">⅓ · ½ · ⅔</span>
+        <span class="sticker sticker--3" aria-hidden="true" data-i18n="sticker.free">100% free</span>
+        <span class="sticker sticker--4" aria-hidden="true">✌︎ 3–4</span>
+      </figure>
+    </section>
+
+    <div class="marquee" aria-hidden="true">
+      <div class="marquee__track">
+        <span data-i18n="mq.1">Scrolling strip</span><b>✦</b><span data-i18n="mq.2">Stacks &amp; tabs</span><b>✦</b><span data-i18n="mq.3">Trackpad swipe</span><b>✦</b><span data-i18n="mq.4">Preset widths</span><b>✦</b><span data-i18n="mq.5">Minimap</span><b>✦</b><span data-i18n="mq.6">Multiple displays</span><b>✦</b><span data-i18n="mq.7">Raycast &amp; CLI</span><b>✦</b>
+        <span data-i18n="mq.1">Scrolling strip</span><b>✦</b><span data-i18n="mq.2">Stacks &amp; tabs</span><b>✦</b><span data-i18n="mq.3">Trackpad swipe</span><b>✦</b><span data-i18n="mq.4">Preset widths</span><b>✦</b><span data-i18n="mq.5">Minimap</span><b>✦</b><span data-i18n="mq.6">Multiple displays</span><b>✦</b><span data-i18n="mq.7">Raycast &amp; CLI</span><b>✦</b>
+      </div>
+    </div>
+
+    <!-- Features -->
+    <section class="section" id="features">
+      <header class="section__head">
+        <p class="eyebrow" data-i18n="features.eyebrow">Features</p>
+        <h2 data-i18n="features.title">Everything stays in a line you can steer.</h2>
+        <p class="section__lead" data-i18n="features.lead">No overlapping, no hunting for windows behind other windows. Strip lays them out, you move along the strip.</p>
+      </header>
+
+      <div class="bento">
+        <article class="card c-sun card--wide">
+          <div class="card__art art-strip" aria-hidden="true">
+            <div class="art-strip__track">
+              <i style="--w:30%"></i><i class="on" style="--w:44%"></i><i style="--w:30%"></i><i style="--w:44%"></i><i style="--w:30%"></i>
+            </div>
+            <div class="art-strip__frame"></div>
+          </div>
+          <h3 data-i18n="f.strip.t">An endless strip of columns</h3>
+          <p data-i18n="f.strip.d">Every window is a column. New ones open right next to the one you're using, nothing gets resized behind your back, and the strip scrolls only as far as it needs to.</p>
+        </article>
+
+        <article class="card c-pink">
+          <div class="card__art art-stack" aria-hidden="true">
+            <div class="art-stack__col"><i></i><i></i><i></i></div>
+          </div>
+          <h3 data-i18n="f.stack.t">Stacks &amp; tabs</h3>
+          <p data-i18n="f.stack.d">Stack windows into one column, resize them, or flip the stack into tabs when space is tight.</p>
+        </article>
+
+        <article class="card c-sky">
+          <div class="card__art art-width" aria-hidden="true">
+            <div class="art-width__bar"><i></i></div>
+            <div class="art-width__labels"><span>⅓</span><span>½</span><span>⅔</span><span>1</span></div>
+          </div>
+          <h3 data-i18n="f.width.t">Preset widths</h3>
+          <p data-i18n="f.width.d">Cycle through ⅓, ½, ⅔ and full width with one key, nudge wider or narrower, or center the focused column.</p>
+        </article>
+
+        <article class="card c-mint">
+          <div class="card__art art-swipe" aria-hidden="true">
+            <div class="art-swipe__pad"><b></b><b></b><b></b></div>
+            <div class="art-swipe__row"><i></i><i></i><i></i><i></i></div>
+          </div>
+          <h3 data-i18n="f.swipe.t">Trackpad swipe</h3>
+          <p data-i18n="f.swipe.d">Glide along the strip with three or four fingers. When you let go it settles on the nearest column.</p>
+        </article>
+
+        <article class="card c-grape">
+          <div class="card__art art-layouts" aria-hidden="true">
+            <span class="l l-full"><i></i></span>
+            <span class="l l-two"><i></i><i></i></span>
+            <span class="l l-grid"><i></i><i></i><i></i><i></i></span>
+            <span class="l l-21"><i></i><i></i><i></i></span>
+            <span class="l l-12"><i></i><i></i><i></i></span>
+            <span class="l l-strip"><i></i><i></i><i></i></span>
+          </div>
+          <h3 data-i18n="f.layouts.t">Layouts when you need them</h3>
+          <p data-i18n="f.layouts.d">Switch from the strip to full screen, two side by side, a 2×2 grid or 2+1 splits — from the menu bar or a shortcut.</p>
+        </article>
+
+        <article class="card c-peach card--wide">
+          <div class="card__art art-map" aria-hidden="true">
+            <div class="art-map__screen">
+              <i></i><i class="on"></i><i></i>
+              <div class="art-map__hud"><kbd>⌃</kbd><kbd>⌥</kbd><kbd>L</kbd></div>
+              <div class="art-map__mini"><b></b><b class="on"></b><b></b><b></b><b></b><s></s></div>
+            </div>
+          </div>
+          <h3 data-i18n="f.map.t">Always know where you are</h3>
+          <p data-i18n="f.map.d">A minimap shows the whole strip and your place in it. Add a focus border, dim inactive windows, and see each shortcut as you press it.</p>
+        </article>
+
+        <article class="card c-lime">
+          <div class="card__art art-displays" aria-hidden="true">
+            <div class="art-displays__d"><i></i><i class="fly"></i></div>
+            <div class="art-displays__d"><i></i></div>
+            <div class="art-displays__float"></div>
+          </div>
+          <h3 data-i18n="f.rules.t">App rules &amp; multiple displays</h3>
+          <p data-i18n="f.rules.d">Keep Calculator or System Settings floating, give apps their own width and position, and send windows to the next display.</p>
+        </article>
+
+        <article class="card c-ink">
+          <div class="card__art art-code" aria-hidden="true">
+<pre><code><span class="c">$</span> strip focus-right
+<span class="c">$</span> strip layout grid2x2
+<span class="c">$</span> open strip://run/center</code></pre>
+          </div>
+          <h3 data-i18n="f.auto.t">Scriptable</h3>
+          <p data-i18n="f.auto.d">Every command works from <code>strip://</code> URLs, a <code>strip</code> command-line tool and ready-made Raycast script commands.</p>
+        </article>
+
+        <article class="card c-coral">
+          <div class="card__art art-privacy" aria-hidden="true">
+            <svg viewBox="0 0 48 48"><rect x="10" y="21" width="28" height="20" rx="5"/><path d="M16 21v-5a8 8 0 0 1 16 0v5" fill="none"/></svg>
+            <div class="art-privacy__langs"><span>EN</span><span>TR</span><span>ES</span><span>FR</span><span>IT</span></div>
+          </div>
+          <h3 data-i18n="f.privacy.t">Private by design</h3>
+          <p data-i18n="f.privacy.d">Strip needs one permission — Accessibility — to move windows. It doesn't record or send anything. Available in five languages.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- Shortcuts -->
+    <section class="section" id="shortcuts">
+      <header class="section__head">
+        <p class="eyebrow" data-i18n="sc.eyebrow">Keyboard first</p>
+        <h2 data-i18n="sc.title">Everything starts with <kbd>⌃</kbd> <kbd>⌥</kbd></h2>
+        <p class="section__lead" data-i18n="sc.lead">Vim-style keys or arrows, your choice. Every shortcut can be changed in Settings.</p>
+      </header>
+      <ul class="keys">
+        <li><span class="combo"><kbd>H</kbd><kbd>L</kbd></span><span data-i18n="sc.focus">Focus window left / right</span></li>
+        <li><span class="combo"><kbd>←</kbd><kbd>→</kbd></span><span data-i18n="sc.screen">Slide to previous / next screen</span></li>
+        <li><span class="combo"><kbd>⇧</kbd><kbd>H</kbd><kbd>L</kbd></span><span data-i18n="sc.move">Move window left / right</span></li>
+        <li><span class="combo"><kbd>J</kbd><kbd>K</kbd></span><span data-i18n="sc.updown">Window below / above in stack</span></li>
+        <li><span class="combo"><kbd>[</kbd><kbd>]</kbd></span><span data-i18n="sc.stack">Stack into column left / right</span></li>
+        <li><span class="combo"><kbd>R</kbd></span><span data-i18n="sc.cycle">Cycle preset widths</span></li>
+        <li><span class="combo"><kbd>F</kbd></span><span data-i18n="sc.full">Full width</span></li>
+        <li><span class="combo"><kbd>C</kbd></span><span data-i18n="sc.center">Center column</span></li>
+        <li><span class="combo"><kbd>=</kbd><kbd>−</kbd></span><span data-i18n="sc.wider">Wider / narrower</span></li>
+        <li><span class="combo"><kbd>T</kbd></span><span data-i18n="sc.float">Float / tile window</span></li>
+        <li><span class="combo"><kbd>1</kbd>…<kbd>9</kbd></span><span data-i18n="sc.jump">Jump to window 1–9</span></li>
+        <li><span class="combo"><kbd>N</kbd></span><span data-i18n="sc.display">Send window to next display</span></li>
+      </ul>
+    </section>
+
+    <!-- Download -->
+    <section class="section download" id="download">
+      <div class="download__card">
+        <img src="assets/img/icon.png" alt="" width="96" height="96">
+        <h2 data-i18n="dl.title">Get Strip</h2>
+        <p class="section__lead" data-i18n="dl.lead">Free, signed and notarized by Apple. Universal app for Apple silicon and Intel Macs.</p>
+        <a class="btn btn--primary btn--lg js-download" href="#">
+          <span data-i18n="cta.download">Download for macOS</span>
+        </a>
+        <p class="fine"><span data-i18n="dl.req">Requires macOS 13 Ventura or later</span> · <span class="js-version">v1.0.0</span></p>
+        <ol class="steps">
+          <li><b>1</b><span data-i18n="dl.s1">Open the DMG and drag Strip into Applications.</span></li>
+          <li><b>2</b><span data-i18n="dl.s2">Launch Strip and allow it under Privacy &amp; Security → Accessibility.</span></li>
+          <li><b>3</b><span data-i18n="dl.s3">Press ⌃⌥L to move right. Strip lives in your menu bar and updates itself.</span></li>
+        </ol>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer__inner">
+      <span class="brand brand--sm"><img src="assets/img/icon.png" alt="" width="20" height="20"> Strip</span>
+      <span>© 2026 Enis Burak Demirci</span>
+    </div>
+  </footer>
+
+  <script src="assets/js/i18n.js"></script>
+  <script src="assets/js/main.js"></script>
+</body>
+</html>

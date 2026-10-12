@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Title bar of the focused column, in the app's focus orange. -->
+  <defs>
+    <clipPath id="col"><rect x="306" y="180" width="412" height="568" rx="72"/></clipPath>
+  </defs>
+  <rect x="306" y="180" width="412" height="92" fill="#FF8A1F" clip-path="url(#col)"/>
+  <circle cx="370" cy="226" r="15" fill="#FFFFFF" fill-opacity="0.9"/>
+  <circle cx="416" cy="226" r="15" fill="#FFFFFF" fill-opacity="0.7"/>
+  <circle cx="462" cy="226" r="15" fill="#FFFFFF" fill-opacity="0.5"/>
+</svg>

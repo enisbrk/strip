@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- The strip's minimap: a track running across the icon. -->
+  <rect x="232" y="800" width="560" height="44" rx="22" fill="#FFFFFF" fill-opacity="0.6"/>
+</svg>
