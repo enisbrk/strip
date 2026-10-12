@@ -18,6 +18,8 @@ window.STRIP_I18N = {
     "hero.lead": "Strip her pencereyi, ekranınızın kenarlarından taşan yatay bir şerit üzerinde bir sütuna dönüştürür. Yeni pencereler odaktaki pencerenin yanında açılır, diğerleri boyutunu korur ve şerit yalnızca üzerinde çalıştığınız pencereyi gösterecek kadar kayar.",
     "cta.download": "macOS için indir",
     "cta.explore": "Nasıl çalıştığını gör",
+    "cta.github": "GitHub'da yıldızla",
+    "dl.source": "GitHub'da açık kaynak — sürümler, değişiklikler ve hata bildirimleri",
     "cta.fine": "Ücretsiz · macOS 13 Ventura veya üstü · Apple silicon ve Intel",
     "features.eyebrow": "Özellikler",
     "features.title": "Her şey yönlendirebileceğiniz tek bir sırada.",
