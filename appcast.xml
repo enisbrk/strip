@@ -5,5 +5,14 @@
     <link>https://enisbrk.github.io/strip/appcast.xml</link>
     <description>Strip updates</description>
     <language>en</language>
+    <item>
+      <title>Version 1.0.0</title>
+      <pubDate>Mon, 12 Oct 2026 23:42:59 +0300</pubDate>
+      <sparkle:version>1</sparkle:version>
+      <sparkle:shortVersionString>1.0.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[<p>First release</p>]]></description>
+      <enclosure url="https://github.com/enisbrk/strip/releases/download/v1.0.0/Strip-1.0.0.dmg" type="application/octet-stream" sparkle:edSignature="RZokjJCD0MaFwqsNyxSlr6q6rGdbP0c8H8WjlY7JN0kPzdLe4L7LepjhzOo6WZKX40qD8f3kT6aXkqT+SwKwBw==" length="7562724"/>
+    </item>
   </channel>
 </rss>
