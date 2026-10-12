@@ -544,7 +544,7 @@ h2 kbd { font-size: .55em; vertical-align: .25em; }
   .nav__inner { padding: 10px 16px; gap: 12px; }
   .nav__links { display: none; }
   .lang { margin-left: auto; }
-  .btn--gh { width: 100%; max-width: 320px; }
+  .cta .btn { width: 100%; max-width: 320px; }
   .hero { padding: 36px 16px 48px; gap: 44px; }
   .mac { padding: 6px; border-radius: 16px; box-shadow: var(--pop); }
   .mac__screen { border-radius: 10px; }
