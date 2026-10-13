@@ -252,6 +252,12 @@ h1 em::after {
 }
 .minimap b { background: rgba(255,255,255,.4); }
 .minimap b.is-focus { background: var(--sun); }
+/* The app's icon, as in the real minimap: a dot in the app's color. */
+.minimap b::after {
+  content: ""; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: calc(.9 * var(--u)); height: calc(.9 * var(--u)); border-radius: 30%;
+  background: var(--c, transparent); border: 1px solid rgba(27, 21, 48, .55);
+}
 .minimap s { border: 1.5px solid #fff; top: calc(.25 * var(--u)); bottom: calc(.25 * var(--u)); text-decoration: none; }
 
 /* Stickers floating around the demo */
@@ -443,6 +449,11 @@ h2 kbd { font-size: .55em; vertical-align: .25em; }
 .art-map__mini { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); display: flex; gap: 3px; padding: 4px; border-radius: 6px; background: rgba(27,21,48,.75); }
 .art-map__mini b { width: 16px; height: 12px; border-radius: 2px; background: rgba(255,255,255,.4); }
 .art-map__mini b.on { width: 24px; background: var(--sun); }
+.art-map__mini b { position: relative; }
+.art-map__mini b::after {
+  content: ""; position: absolute; left: 50%; top: 50%; width: 7px; height: 7px; border-radius: 2px;
+  transform: translate(-50%, -50%); background: var(--c); border: 1px solid var(--ink);
+}
 .art-map__mini s { position: absolute; top: 2px; bottom: 2px; left: 2px; width: 64px; border: 1.5px solid #fff; border-radius: 3px; animation: mini 6s ease-in-out infinite; }
 @keyframes mini { 0%, 40% { transform: translateX(0); } 50%, 90% { transform: translateX(38px); } 100% { transform: translateX(0); } }
 .art-map__hud { position: absolute; left: 50%; bottom: 30px; transform: translateX(-50%); display: flex; gap: 3px; padding: 4px 6px; border-radius: 7px; background: #1b1530; animation: hudpop 3s ease-in-out infinite; }
@@ -481,6 +492,147 @@ h2 kbd { font-size: .55em; vertical-align: .25em; }
 .art-privacy__langs span:nth-child(1) { background: var(--sky); } .art-privacy__langs span:nth-child(2) { background: var(--coral); }
 .art-privacy__langs span:nth-child(3) { background: var(--sun); } .art-privacy__langs span:nth-child(4) { background: var(--grape); }
 .art-privacy__langs span:nth-child(5) { background: var(--mint); }
+
+/* strip editor: a window is dragged to the next screen, the others make room */
+.art-editor__panel {
+  position: absolute; inset: 14px 18px; border-radius: 14px;
+  background: #fff; border: 2px solid var(--ink); box-shadow: 4px 4px 0 var(--ink);
+}
+.art-editor__head {
+  position: absolute; top: 7px; left: 12px; right: 10px; display: flex; justify-content: space-between; align-items: center;
+  font: 800 12px/1 "Bricolage Grotesque", -apple-system, sans-serif; color: var(--ink);
+}
+.art-editor__keys { display: flex; gap: 2px; }
+.art-editor__keys kbd { font-size: 9px; min-width: 17px; height: 17px; border-width: 1.5px; border-radius: 5px; box-shadow: none; background: var(--sun); }
+.art-editor__groups s {
+  position: absolute; top: 32px; bottom: 9px; width: 45.5%; border-radius: 10px;
+  background: rgba(27, 21, 48, .06); text-decoration: none;
+}
+.art-editor__groups s:nth-child(1) { left: 3%; }
+.art-editor__groups s:nth-child(2) { left: 51.5%; }
+/* Where the dragged window will land. */
+.art-editor__panel::after {
+  content: ""; position: absolute; top: 40px; bottom: 17px; left: 53.5%; width: 20%;
+  border: 2px dashed var(--violet); border-radius: 9px; background: rgba(108, 76, 255, .1);
+  opacity: 0; animation: ed-slot 9s ease-in-out infinite;
+}
+.art-editor__panel > i {
+  position: absolute; top: 40px; bottom: 17px; width: 20%; border-radius: 9px; z-index: 1;
+  background: #fff; border: 2px solid var(--ink); box-shadow: 3px 3px 0 var(--ink);
+  background-image: linear-gradient(var(--c) 0 11px, transparent 11px);
+}
+.art-editor__panel > i b {
+  position: absolute; left: 50%; top: 56%; transform: translate(-50%, -50%);
+  width: 22px; height: 22px; border-radius: 7px; background: var(--c); border: 2px solid var(--ink);
+}
+.art-editor__panel .t1 { left: 5%; --c: var(--pink); }
+.art-editor__panel .t2 { left: 26.5%; --c: var(--violet); z-index: 2; animation: ed-t2 9s cubic-bezier(.4, 0, .2, 1) infinite; }
+.art-editor__panel .t3 { left: 53.5%; --c: var(--sun); animation: ed-t3 9s cubic-bezier(.3, 1.3, .5, 1) infinite; }
+.art-editor__panel .t4 { left: 75%; --c: var(--mint); }
+.art-editor__cursor {
+  position: absolute; z-index: 3; width: 20px; height: 20px; fill: var(--ink); stroke: #fff; stroke-width: 1.5;
+  animation: ed-cursor 9s cubic-bezier(.4, 0, .2, 1) infinite;
+}
+@keyframes ed-t2 {
+  0%, 12% { left: 26.5%; transform: none; box-shadow: 3px 3px 0 var(--ink); }
+  20% { left: 29%; transform: translateY(-7px) scale(1.07) rotate(-3deg); box-shadow: 9px 11px 0 rgba(27, 21, 48, .3); }
+  46% { left: 55%; transform: translateY(-7px) scale(1.07) rotate(2deg); box-shadow: 9px 11px 0 rgba(27, 21, 48, .3); }
+  56%, 80% { left: 53.5%; transform: none; box-shadow: 3px 3px 0 var(--ink); }
+  90%, 100% { left: 26.5%; transform: none; }
+}
+@keyframes ed-t3 { 0%, 26% { left: 53.5%; } 38%, 80% { left: 26.5%; } 90%, 100% { left: 53.5%; } }
+@keyframes ed-slot { 0%, 30% { opacity: 0; } 38%, 52% { opacity: 1; } 58%, 100% { opacity: 0; } }
+@keyframes ed-cursor {
+  0% { left: 62%; top: 92%; opacity: 0; }
+  8%, 12% { left: 36%; top: 56%; opacity: 1; }
+  20% { left: 39%; top: 52%; }
+  46% { left: 65%; top: 52%; opacity: 1; }
+  56% { left: 63.5%; top: 56%; opacity: 1; }
+  68%, 100% { left: 80%; top: 92%; opacity: 0; }
+}
+
+/* drop to share: 1 → ½ ½ → ½ ¼ ¼ → four quarters */
+.art-share__screen { position: absolute; inset: 18px 20px; border: 3px dashed rgba(27, 21, 48, .3); border-radius: 14px; }
+.art-share__screen i {
+  position: absolute; border-radius: 8px; background: #fff; border: 2px solid var(--ink); box-shadow: 3px 3px 0 var(--ink);
+  background-image: linear-gradient(var(--c) 0 10px, transparent 10px);
+  animation: 12s cubic-bezier(.3, 1.2, .5, 1) infinite;
+}
+.art-share__screen .w1 { --c: var(--pink); animation-name: sh-1; }
+.art-share__screen .w2 { --c: var(--violet); animation-name: sh-2; z-index: 2; }
+.art-share__screen .w3 { --c: var(--sun); animation-name: sh-3; z-index: 3; }
+.art-share__screen .w4 { --c: var(--mint); animation-name: sh-4; z-index: 4; }
+@keyframes sh-1 {
+  0%, 22% { left: 3%; top: 4%; width: 94%; height: 92%; }
+  27%, 60% { left: 3%; top: 4%; width: 45.5%; height: 92%; }
+  65%, 92% { left: 3%; top: 4%; width: 45.5%; height: 44.5%; }
+  98%, 100% { left: 3%; top: 4%; width: 94%; height: 92%; }
+}
+@keyframes sh-2 {
+  0%, 6% { left: 130%; top: 22%; width: 40%; height: 52%; transform: rotate(5deg); opacity: 1; }
+  20% { left: 38%; top: 24%; width: 40%; height: 52%; transform: rotate(4deg); }
+  27%, 37% { left: 51.5%; top: 4%; width: 45.5%; height: 92%; transform: none; }
+  43%, 90% { left: 51.5%; top: 4%; width: 45.5%; height: 44.5%; transform: none; opacity: 1; }
+  95% { opacity: 0; left: 51.5%; top: 4%; width: 45.5%; height: 44.5%; }
+  96%, 99% { left: 130%; top: 22%; width: 40%; height: 52%; opacity: 0; }
+  100% { left: 130%; opacity: 1; }
+}
+@keyframes sh-3 {
+  0%, 30% { left: 130%; top: 30%; width: 38%; height: 48%; transform: rotate(-5deg); opacity: 1; }
+  40% { left: 62%; top: 44%; width: 38%; height: 48%; transform: rotate(-4deg); }
+  44%, 90% { left: 51.5%; top: 51.5%; width: 45.5%; height: 44.5%; transform: none; opacity: 1; }
+  95% { opacity: 0; left: 51.5%; top: 51.5%; width: 45.5%; height: 44.5%; }
+  96%, 99% { left: 130%; top: 30%; width: 38%; height: 48%; opacity: 0; }
+  100% { left: 130%; opacity: 1; }
+}
+@keyframes sh-4 {
+  0%, 52% { left: 130%; top: 34%; width: 38%; height: 48%; transform: rotate(5deg); opacity: 1; }
+  61% { left: 16%; top: 46%; width: 38%; height: 48%; transform: rotate(4deg); }
+  65%, 90% { left: 3%; top: 51.5%; width: 45.5%; height: 44.5%; transform: none; opacity: 1; }
+  95% { opacity: 0; left: 3%; top: 51.5%; width: 45.5%; height: 44.5%; }
+  96%, 99% { left: 130%; top: 34%; width: 38%; height: 48%; opacity: 0; }
+  100% { left: 130%; opacity: 1; }
+}
+
+/* centered with margins: the stack takes a screen of its own, the next column slides out */
+.art-center__screen { position: absolute; inset: 16px 22px; border: 3px dashed rgba(27, 21, 48, .3); border-radius: 14px; overflow: hidden; }
+.art-center__screen s {
+  position: absolute; top: 0; bottom: 0; width: 25%; text-decoration: none; opacity: 0;
+  background: repeating-linear-gradient(45deg, rgba(27, 21, 48, .13) 0 5px, transparent 5px 11px);
+  animation: ce-margin 8s ease-in-out infinite;
+}
+.art-center__screen s:nth-child(1) { left: 0; }
+.art-center__screen s:nth-child(2) { right: 0; }
+.art-center__stack, .art-center__next {
+  position: absolute; top: 25px; bottom: 25px; width: calc((100% - 44px) * .47);
+  display: flex; flex-direction: column; gap: 7px;
+}
+.art-center__stack i, .art-center__next i {
+  flex: 1; border-radius: 9px; background: #fff; border: 2px solid var(--ink); box-shadow: 3px 3px 0 var(--ink);
+  background-image: linear-gradient(var(--c) 0 11px, transparent 11px);
+}
+.art-center__stack { animation: ce-stack 8s cubic-bezier(.3, 1.2, .5, 1) infinite; }
+.art-center__stack i:nth-child(1) { --c: var(--violet); outline: 3px solid var(--violet); outline-offset: 2px; }
+.art-center__stack i:nth-child(2) { --c: var(--sky); }
+.art-center__next { --c: var(--coral); animation: ce-next 8s cubic-bezier(.4, 0, .2, 1) infinite; }
+.art-center__next i { --c: var(--coral); }
+.art-center__hud {
+  position: absolute; left: 50%; bottom: 4px; transform: translateX(-50%); display: flex; gap: 3px;
+  padding: 4px 6px; border-radius: 7px; background: #1b1530; opacity: 0; animation: ce-hud 8s ease-in-out infinite;
+}
+.art-center__hud kbd { font-size: 10px; min-width: 18px; height: 18px; border-width: 1px; box-shadow: none; background: var(--sun); }
+@keyframes ce-stack {
+  0%, 26% { left: calc(22px + (100% - 44px) * .025); }
+  42%, 80% { left: calc(50% - (100% - 44px) * .235); }
+  92%, 100% { left: calc(22px + (100% - 44px) * .025); }
+}
+@keyframes ce-next {
+  0%, 26% { left: calc(22px + (100% - 44px) * .505); }
+  40%, 80% { left: calc(100% + 30px); }
+  92%, 100% { left: calc(22px + (100% - 44px) * .505); }
+}
+@keyframes ce-margin { 0%, 34% { opacity: 0; } 44%, 80% { opacity: 1; } 88%, 100% { opacity: 0; } }
+@keyframes ce-hud { 0%, 16% { opacity: 0; transform: translate(-50%, 6px); } 22%, 46% { opacity: 1; transform: translate(-50%, 0); } 54%, 100% { opacity: 0; } }
 
 /* ---------- Shortcuts ---------- */
 .keys { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }

@@ -70,6 +70,7 @@ final class AXWindow {
     var isMinimized: Bool { AX.value(element, kAXMinimizedAttribute) ?? false }
     var isFullscreen: Bool { AX.value(element, "AXFullScreen") ?? false }
     var isResizable: Bool { AX.isSettable(element, kAXSizeAttribute) }
+    var isModal: Bool { AX.value(element, kAXModalAttribute) ?? false }
 
     var isStandardWindow: Bool {
         role == kAXWindowRole && subrole == kAXStandardWindowSubrole
@@ -100,6 +101,11 @@ final class AXWindow {
         setSize(rect.size)
         setPosition(rect.origin)
         setSize(rect.size)
+    }
+
+    /// Brings the window in front of other windows without activating its app.
+    func raise() {
+        AXUIElementPerformAction(element, kAXRaiseAction as CFString)
     }
 
     /// Raises the window and makes its app frontmost.

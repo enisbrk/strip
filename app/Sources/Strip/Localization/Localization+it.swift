@@ -82,6 +82,14 @@ extension Localization {
             "Non scegliere il numero di dita che macOS usa per passare da uno spazio all'altro.",
         "Engine":
             "Motore",
+        "Edit strip":
+            "Modifica striscia",
+        "Drag to reorder · drop above or below a window to stack · click to focus · Esc to close":
+            "Trascina per riordinare · rilascia sopra o sotto una finestra per impilare · fai clic per attivare · Esc per chiudere",
+        "Width":
+            "Larghezza",
+        "Center on its own screen":
+            "Centra sulla propria schermata",
         "Equalize stack heights":
             "Uniforma le altezze della pila",
         "Essential shortcuts":

@@ -105,6 +105,8 @@ final class MinimapModel: ObservableObject {
     @Published var highlight: CGRect?
     @Published var showsMap = true
     @Published var caption: MinimapCaption?
+    /// App icon per window, drawn inside its tile when the tile is big enough.
+    @Published var icons: [WindowID: NSImage] = [:]
 }
 
 /// A small glass map of the strip shown above the Dock while navigating, then faded out, with
@@ -123,7 +125,8 @@ final class Minimap {
     ///   - showMap: false shows only the caption (minimap turned off in Settings).
     ///   - caption: the shortcut just used; nil keeps a recent caption on screen.
     func show(displayID: CGDirectDisplayID, screen: NSScreen, strip: Strip, preset: LayoutPreset,
-              engine: LayoutEngine, showMap: Bool = true, caption: MinimapCaption? = nil) {
+              engine: LayoutEngine, icons: [WindowID: NSImage] = [:], showMap: Bool = true,
+              caption: MinimapCaption? = nil) {
         let entry = panels[displayID] ?? makePanel(displayID)
         let model = entry.model
 
@@ -142,6 +145,7 @@ final class Minimap {
                                   maxSize: CGSize(width: 100_000, height: 100_000), compact: true)
             o = o.scaled(by: min(Self.maxWidth / o.size.width, Self.maxHeight / o.size.height, 1))
             model.overview = o
+            model.icons = icons
             model.focusedIndex = strip.focusedIndex
             if preset == .strip {
                 model.highlight = o.viewport
@@ -252,8 +256,9 @@ struct MinimapView: View {
                 // One tile per window of a stack; the focused window glows orange, the rest of its
                 // column is a softer orange.
                 ForEach(t.rows, id: \.windowID) { row in
-                    Tile(focused: focused, active: row.isActive)
-                        .frame(width: max(row.rect.width - 1, 2), height: max(row.rect.height, 1))
+                    let size = CGSize(width: max(row.rect.width - 1, 2), height: max(row.rect.height, 1))
+                    Tile(focused: focused, active: row.isActive, icon: model.icons[row.windowID], size: size)
+                        .frame(width: size.width, height: size.height)
                         .position(x: row.rect.midX, y: row.rect.midY)
                 }
                 if let bar = t.tabBar {
@@ -280,8 +285,23 @@ struct MinimapView: View {
     private struct Tile: View {
         let focused: Bool
         let active: Bool
+        let icon: NSImage?
+        let size: CGSize
 
         var body: some View {
+            background.overlay {
+                // Skipped on slivers too small to tell an icon apart.
+                let side = min(size.width - 4, size.height - 4, 22)
+                if let icon, side >= 10 {
+                    Image(nsImage: icon).resizable().interpolation(.high)
+                        .frame(width: side, height: side)
+                        .opacity(focused || active ? 1 : 0.8)
+                }
+            }
+        }
+
+        @ViewBuilder
+        private var background: some View {
             let shape = RoundedRectangle(cornerRadius: 3, style: .continuous)
             if focused {
                 shape

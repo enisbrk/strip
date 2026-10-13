@@ -107,15 +107,21 @@ function metrics() {
 
 function columnWidth(m, w) { return w * (m.W - 2 * m.gap + m.gap) - m.gap; }
 
+/** Room a column takes on the strip: a centered column (⌃⌥C) takes a whole screen. */
+function slotWidth(m, col) { return col.centered ? m.W - 2 * m.gap : columnWidth(m, col.w); }
+
+/** Left margin of a centered column's windows inside its slot. */
+function inset(m, col) { return col.centered ? (slotWidth(m, col) - columnWidth(m, col.w)) / 2 : 0; }
+
 function columnX(m, index) {
   let x = m.gap;
-  for (let i = 0; i < index; i++) x += columnWidth(m, cols[i].w) + m.gap;
+  for (let i = 0; i < index; i++) x += slotWidth(m, cols[i]) + m.gap;
   return x;
 }
 
 /** Scrolls just enough to show the focused column (Strip's default "never center" mode). */
 function revealFocus(m, center = false) {
-  const left = columnX(m, focus.col), width = columnWidth(m, cols[focus.col].w);
+  const left = columnX(m, focus.col), width = slotWidth(m, cols[focus.col]);
   if (center) scroll = left + width / 2 - m.W / 2;
   else if (left - m.gap < scroll) scroll = left - m.gap;
   else if (left + width + m.gap > scroll + m.W) scroll = left + width + m.gap - m.W;
@@ -127,7 +133,7 @@ function render() {
   const m = metrics();
   const seen = new Set();
   cols.forEach((col, c) => {
-    const x = columnX(m, c) - scroll;
+    const x = columnX(m, c) + inset(m, col) - scroll;
     const w = columnWidth(m, col.w);
     const h = (m.height - m.gap * (col.wins.length - 1)) / col.wins.length;
     col.wins.forEach((id, r) => {
@@ -157,8 +163,9 @@ function renderMinimap(m) {
   const blocks = minimap.querySelectorAll("b");
   cols.forEach((col, c) => {
     const b = blocks[c] || minimap.insertBefore(document.createElement("b"), minimap.querySelector("s"));
-    b.style.left = pad + columnX(m, c) * k + "px";
+    b.style.left = pad + (columnX(m, c) + inset(m, col)) * k + "px";
     b.style.width = columnWidth(m, col.w) * k + "px";
+    b.style.setProperty("--c", APPS[col.wins[0]].color);
     b.classList.toggle("is-focus", c === focus.col);
   });
   for (let i = cols.length; i < blocks.length; i++) blocks[i].remove();
@@ -217,8 +224,9 @@ const steps = [
       focus = { col: focus.col - 1, row: left.wins.length - 1 };
     },
   },
+  // The stack gets a screen of its own, centered with margins; its neighbours slide away.
+  { keys: [...CMD, "C"], label: "hud.centerOwn", run: () => { cols[focus.col].centered = true; } },
   { keys: [...CMD, "H"], label: "hud.focusLeft", run: () => { focus = { col: focus.col - 1, row: 0 }; } },
-  { keys: [...CMD, "C"], label: "hud.center", center: true, run: () => {} },
   { keys: [...CMD, "←"], label: "hud.screenLeft", run: () => { focus = { col: 0, row: 0 }; scroll = 0; } },
 ];
 

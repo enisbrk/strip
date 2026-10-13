@@ -82,6 +82,7 @@ enum Diagnostics {
         GlassStyle.forceMaterial = true
         let miniModel = MinimapModel()
         miniModel.overview = mini
+        miniModel.icons = tiles.compactMapValues(\.icon)
         miniModel.focusedIndex = strip.focusedIndex
         miniModel.highlight = layout == .strip ? mini.viewport : mini.pages.first
         miniModel.caption = MinimapCaption(keys: ["⌃", "⌥", "→"], title: Command.screenRight.title)

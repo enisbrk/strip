@@ -82,6 +82,14 @@ extension Localization {
             "No elijas el número de dedos que macOS usa para pasar de un escritorio a otro.",
         "Engine":
             "Motor",
+        "Edit strip":
+            "Editar tira",
+        "Drag to reorder · drop above or below a window to stack · click to focus · Esc to close":
+            "Arrastra para reordenar · suelta encima o debajo de una ventana para apilar · haz clic para enfocar · Esc para cerrar",
+        "Width":
+            "Ancho",
+        "Center on its own screen":
+            "Centrar en su propia pantalla",
         "Equalize stack heights":
             "Igualar alturas de la pila",
         "Essential shortcuts":

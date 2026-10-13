@@ -521,3 +521,206 @@ final class MaximizeTests: XCTestCase {
         XCTAssertFalse(c.maximized)
     }
 }
+
+final class ShareTests: XCTestCase {
+    private func strip(_ widths: [CGFloat]) -> Strip {
+        var s = Strip()
+        for (i, w) in widths.enumerated() { s.append(WindowID(i + 1), width: w) }
+        return s
+    }
+
+    func testOneWindowBecomesTwoHalves() {
+        var s = strip([1, 1])
+        s.share(2, with: 1)
+        XCTAssertEqual(s.columns.map(\.windows), [[1], [2]])
+        XCTAssertEqual(s.columns.map(\.width), [0.5, 0.5])
+        XCTAssertEqual(s.focusedWindowID, 2)
+    }
+
+    func testTwoBecomeHalfAndTwoQuarters() {
+        var s = strip([0.5, 0.5, 1])
+        s.share(3, with: 2)
+        XCTAssertEqual(s.columns.map(\.windows), [[1], [2, 3]])
+        XCTAssertEqual(s.columns.map(\.width), [0.5, 0.5])
+        XCTAssertEqual(s.columns[1].heightFractions, [0.5, 0.5])
+    }
+
+    func testThreeBecomeFourQuarters() {
+        var s = strip([0.5, 0.5, 1])
+        s.share(3, with: 2)
+        s.append(4, width: 1)
+        s.share(4, with: 3) // onto the stack: the single half takes it
+        XCTAssertEqual(s.columns.map(\.windows), [[1, 4], [2, 3]])
+    }
+
+    func testFullScreenOpensNewScreenAfterIt() {
+        var s = strip([0.5, 0.5, 1])
+        s.share(3, with: 2)
+        s.append(4, width: 1)
+        s.share(4, with: 1)
+        s.append(5, width: 1)
+        s.share(5, with: 1)
+        XCTAssertEqual(s.columns.map(\.windows), [[1, 4], [2, 3], [5]])
+        XCTAssertEqual(s.columns.last?.width, 1)
+    }
+
+    func testScreensGroupFromTheLeft() {
+        var s = strip([0.5, 0.5, 0.5, 0.5, 1])
+        s.share(5, with: 3) // 3 pairs with 4, not with 2
+        XCTAssertEqual(s.columns.map(\.windows), [[1], [2], [3, 5], [4]])
+    }
+
+    func testDroppingOntoOwnColumnDoesNothing() {
+        var s = strip([0.5, 0.5])
+        let before = s
+        s.share(1, with: 1)
+        XCTAssertEqual(s, before)
+    }
+}
+
+final class CenteredTests: XCTestCase {
+    private let engine = LayoutEngine(area: CGRect(x: 0, y: 0, width: 1000, height: 600), innerGap: 0, centerMode: .never)
+
+    func testCenteredColumnTakesWholeScreenWithMargins() {
+        var s = Strip()
+        s.append(1, width: 0.5)
+        s.append(2, width: 0.5)
+        s.focus(1)
+        s.toggleFocusedCentered()
+        XCTAssertEqual(engine.columnOrigins(s), [0, 1000])
+        XCTAssertEqual(engine.frames(for: s, offset: 0)[1], CGRect(x: 250, y: 0, width: 500, height: 600))
+        // The next column stays off screen.
+        XCTAssertEqual(engine.frames(for: s, offset: 0)[2]?.minX, 1000)
+        XCTAssertEqual(s.screenGroups(), [0..<1, 1..<2])
+    }
+
+    func testCenteringFullWidthStartsAtHalf() {
+        var s = Strip()
+        s.append(1, width: 1)
+        s.toggleCentered(containing: 1)
+        XCTAssertTrue(s.columns[0].centered)
+        XCTAssertEqual(s.columns[0].width, 0.5)
+        s.toggleCentered(containing: 1)
+        XCTAssertFalse(s.columns[0].centered)
+    }
+
+    func testCenteredSurvivesCoding() throws {
+        var s = Strip()
+        s.append(1, width: 0.4)
+        s.toggleFocusedCentered()
+        let decoded = try JSONDecoder().decode(Strip.self, from: JSONEncoder().encode(s))
+        XCTAssertTrue(decoded.columns[0].centered)
+    }
+}
+
+final class RestoreTests: XCTestCase {
+    func testComesBackBetweenTheSameNeighboursAsItWas() {
+        var s = Strip()
+        s.append(1, width: 1)
+        s.append(2, width: 0.4)
+        s.append(3, width: 1)
+        s.focus(2)
+        s.toggleFocusedCentered()
+        let place = s.place(of: 2)!
+        s.remove(2)
+        s.focus(3)
+        s.restore(2, at: place, focus: true)
+        XCTAssertEqual(s.columns.map(\.windowID), [1, 2, 3])
+        XCTAssertEqual(s.columns[1].width, 0.4)
+        XCTAssertTrue(s.columns[1].centered)
+    }
+
+    func testSharedWindowComesBackOnItsOwnScreen() {
+        var s = Strip()
+        s.append(1, width: 0.5)
+        s.append(2, width: 0.5)
+        s.append(3, width: 1)
+        let place = s.place(of: 2)!
+        XCTAssertTrue(place.shared)
+        s.remove(2)
+        s.restore(2, at: place, focus: true)
+        XCTAssertEqual(s.columns.map(\.windowID), [1, 2, 3])
+        XCTAssertEqual(s.columns[1].width, 1)
+
+        s.stack(3, onto: 1)
+        let stacked = s.place(of: 3)!
+        XCTAssertTrue(stacked.shared)
+        s.remove(3)
+        s.restore(3, at: stacked, focus: false)
+        XCTAssertEqual(s.columns.map(\.windows), [[1], [3], [2]])
+        XCTAssertEqual(s.columns[1].width, 1)
+    }
+
+    func testFirstWindowComesBackFirst() {
+        var s = Strip()
+        s.append(1, width: 1)
+        s.append(2, width: 1)
+        let place = s.place(of: 1)!
+        s.remove(1)
+        s.restore(1, at: place, focus: true)
+        XCTAssertEqual(s.columns.map(\.windowID), [1, 2])
+    }
+}
+
+final class EditTests: XCTestCase {
+    private func strip(_ count: Int) -> Strip {
+        var s = Strip()
+        for i in 1...count { s.append(WindowID(i), width: 0.5) }
+        return s
+    }
+
+    func testMoveBesideColumn() {
+        var s = strip(4)
+        s.move(1, beside: 2, after: true)
+        XCTAssertEqual(s.columns.map(\.windowID), [2, 3, 1, 4])
+        s.move(4, beside: 0, after: false)
+        XCTAssertEqual(s.columns.map(\.windowID), [4, 2, 3, 1])
+    }
+
+    func testMoveOutOfStackBesideColumn() {
+        var s = strip(3)
+        s.stack(2, onto: 1)
+        s.move(2, beside: 1, after: true)
+        XCTAssertEqual(s.columns.map(\.windows), [[1], [3], [2]])
+    }
+
+    func testDropPicksMoveStackOrShare() {
+        var s = strip(3)
+        s.drop(3, on: StripDrop(windowID: 1, edge: -1), share: false)
+        XCTAssertEqual(s.columns.map(\.windows), [[3], [1], [2]])
+        s.drop(3, on: StripDrop(windowID: 2, edge: nil), share: false)
+        XCTAssertEqual(s.columns.map(\.windows), [[1], [2, 3]])
+        var t = strip(2)
+        t.setWidth(1, for: 1)
+        t.drop(2, on: StripDrop(windowID: 1, edge: nil), share: true)
+        XCTAssertEqual(t.columns.map(\.width), [0.5, 0.5])
+    }
+
+    func testReorderInsideStack() {
+        var s = strip(3)
+        s.stack(2, onto: 1)
+        s.stack(3, onto: 1)
+        s.focus(1)
+        s.insert(3, nextTo: 1, below: false)
+        XCTAssertEqual(s.columns.map(\.windows), [[3, 1, 2]])
+        s.insert(3, nextTo: 2, below: true)
+        XCTAssertEqual(s.columns.map(\.windows), [[1, 2, 3]])
+        XCTAssertEqual(s.focusedWindowID, 1)
+    }
+
+    func testInsertAboveWindowOfAnotherColumn() {
+        var s = strip(3)
+        s.drop(3, on: StripDrop(windowID: 1, edge: nil, row: -1), share: false)
+        XCTAssertEqual(s.columns.map(\.windows), [[3, 1], [2]])
+    }
+
+    func testStackKeepsFocus() {
+        var s = strip(3)
+        s.focus(3)
+        s.stack(1, onto: 2)
+        XCTAssertEqual(s.columns.map(\.windows), [[2, 1], [3]])
+        XCTAssertEqual(s.focusedWindowID, 3)
+        s.toggleTabbed(containing: 1)
+        XCTAssertTrue(s.columns[0].tabbed)
+    }
+}

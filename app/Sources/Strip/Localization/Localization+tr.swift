@@ -82,6 +82,14 @@ extension Localization {
             "macOS'in masaüstleri arasında kaydırmak için kullandığı parmak sayısını seçmeyin.",
         "Engine":
             "Motor",
+        "Edit strip":
+            "Şeridi düzenle",
+        "Drag to reorder · drop above or below a window to stack · click to focus · Esc to close":
+            "Sıralamak için sürükle · yığınlamak için bir pencerenin üstüne ya da altına bırak · odaklanmak için tıkla · kapatmak için Esc",
+        "Width":
+            "Genişlik",
+        "Center on its own screen":
+            "Kendi ekranında ortala",
         "Equalize stack heights":
             "Stack yüksekliklerini eşitle",
         "Essential shortcuts":

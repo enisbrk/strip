@@ -8,9 +8,10 @@ enum Command: Hashable {
     case focusUp, focusDown, moveUp, moveDown
     case stackLeft, stackRight, popOutLeft, popOutRight, toggleTabbed
     case taller, shorter, equalizeHeights
-    case cycleWidth, fullWidth, center, wider, narrower
+    case cycleWidth, fullWidth, center, toggleCentered, wider, narrower
     case toggleFloat
     case sendToNextDisplay
+    case editStrip
     case toggleEnabled
 
     /// Localized name shown in Settings, the menu and the Raycast commands.
@@ -40,10 +41,12 @@ enum Command: Hashable {
         case .cycleWidth: L("Cycle preset widths")
         case .fullWidth: L("Full width")
         case .center: L("Center column")
+        case .toggleCentered: L("Center on its own screen")
         case .wider: L("Wider")
         case .narrower: L("Narrower")
         case .toggleFloat: L("Float / tile window")
         case .sendToNextDisplay: L("Send window to next display")
+        case .editStrip: L("Edit strip")
         case .toggleEnabled: L("Stop / start window management")
         }
     }
@@ -75,10 +78,12 @@ enum Command: Hashable {
         case .cycleWidth: "cycle-width"
         case .fullWidth: "full-width"
         case .center: "center"
+        case .toggleCentered: "toggle-centered"
         case .wider: "wider"
         case .narrower: "narrower"
         case .toggleFloat: "toggle-float"
         case .sendToNextDisplay: "send-to-next-display"
+        case .editStrip: "edit-strip"
         case .toggleEnabled: "toggle"
         }
     }
@@ -101,6 +106,7 @@ enum Command: Hashable {
         var list: [(Command, [KeyBinding])] = [
             (.screenLeft, [k(kVK_LeftArrow)]),
             (.screenRight, [k(kVK_RightArrow)]),
+            (.editStrip, [k(kVK_ANSI_O)]),
             (.focusLeft, [k(kVK_ANSI_H)]),
             (.focusRight, [k(kVK_ANSI_L)]),
             (.moveLeft, [k(kVK_ANSI_H, shift: true), k(kVK_LeftArrow, shift: true)]),
@@ -121,7 +127,8 @@ enum Command: Hashable {
             (.focusLast, [k(kVK_End)]),
             (.cycleWidth, [k(kVK_ANSI_R)]),
             (.fullWidth, [k(kVK_ANSI_F)]),
-            (.center, [k(kVK_ANSI_C)]),
+            (.center, [k(kVK_ANSI_C, shift: true)]),
+            (.toggleCentered, [k(kVK_ANSI_C)]),
             (.wider, [k(kVK_ANSI_Equal)]),
             (.narrower, [k(kVK_ANSI_Minus)]),
             (.toggleFloat, [k(kVK_ANSI_T)]),

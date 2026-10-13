@@ -13,6 +13,8 @@ private final class Display {
     /// The Space currently shown on this display.
     var spaceID: SpaceID = 0
     var strips: [SpaceID: Strip] = [:]
+    /// Windows of each Space's strip when it was last laid out, to tell when one joins.
+    var knownWindows: [SpaceID: Set<WindowID>] = [:]
     let animator = Animator()
 
     /// The strip of the Space on screen; everything that lays out windows works on this one.
@@ -47,6 +49,8 @@ final class WindowManager: ObservableObject, WindowTrackerDelegate {
         var hidden = false
         /// On a display Strip was told to leave alone.
         var excluded = false
+        /// A sign-in sheet (Wi-Fi portal, modal dialog): floats above everything, never tiled.
+        var keepOnTop = false
 
         var isTileable: Bool { !floating && !minimized && !fullscreen && !hidden && !excluded }
     }
@@ -78,6 +82,7 @@ final class WindowManager: ObservableObject, WindowTrackerDelegate {
     private let focusBorder = FocusBorder()
     private let dimOverlay = DimOverlay()
     private let minimap = Minimap()
+    private let stripEditor = StripEditor()
     private let swipe = TrackpadSwipe()
     private var swipeDisplay: Display?
     private var swipeStartOffset: CGFloat = 0
@@ -89,6 +94,7 @@ final class WindowManager: ObservableObject, WindowTrackerDelegate {
     init(settingsStore: SettingsStore) {
         self.settingsStore = settingsStore
         tabBars.onSelect = { [weak self] id in self?.selectTab(id) }
+        stripEditor.onAction = { [weak self] action in self?.editorAction(action) }
     }
 
     // MARK: - Lifecycle
@@ -144,10 +150,14 @@ final class WindowManager: ObservableObject, WindowTrackerDelegate {
         focusBorder.show(around: nil)
         dimOverlay.hide()
         minimap.hideAll()
+        stripEditor.hide()
         displays.removeAll()
         managed.removeAll()
         tiledCount = 0
     }
+
+    /// System web sheets that ask for something before going on (Wi-Fi portal sign-in, SMS code…).
+    private static let webSheetBundleIDs: Set<String> = ["com.apple.CaptiveNetworkAssistant", "com.apple.NetAuthAgent"]
 
     func settingsChanged() {
         guard isEnabled else { return }
@@ -218,7 +228,7 @@ final class WindowManager: ObservableObject, WindowTrackerDelegate {
             d.strip.viewportOffset = settled.offset
             // Keep focus if the focused column is still fully on screen; else focus where we landed.
             if let f = d.strip.focusedIndex {
-                let x = engine.columnOrigins(d.strip)[f], w = engine.pixelWidth(of: d.strip.columns[f])
+                let x = engine.columnOrigins(d.strip)[f], w = engine.slotWidth(of: d.strip.columns[f])
                 if x < settled.offset - 1 || x + w > settled.offset + engine.area.width + 1 {
                     d.strip.focus(index: settled.index)
                 }
@@ -232,6 +242,8 @@ final class WindowManager: ObservableObject, WindowTrackerDelegate {
             d.strip.viewportOffset = CGFloat(page) * engine.pageStride
         }
         if let id = d.strip.focusedWindowID { activate(managed[id]?.window) }
+        // A swipe navigates like a shortcut does.
+        showMinimap(d)
         render(d, animated: true)
     }
 
@@ -307,6 +319,7 @@ final class WindowManager: ObservableObject, WindowTrackerDelegate {
 
     private func focusWindowUnderMouse() {
         guard isEnabled, settings.focusFollowsMouse, NSEvent.pressedMouseButtons == 0, draggedID == nil,
+              !stripEditor.isVisible,
               swipeDisplay == nil, !displays.contains(where: { $0.animator.isAnimating }),
               let info = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID)
                 as? [[String: Any]] else { return }
@@ -435,6 +448,11 @@ final class WindowManager: ObservableObject, WindowTrackerDelegate {
     /// Adds a window to the strip of the Space it is on.
     private func track(_ id: WindowID, on d: Display, focus: Bool, append: Bool = false) -> SpaceID {
         let space = Spaces.space(of: id) ?? d.spaceID
+        if let place = minimizedPlaces.removeValue(forKey: id), !append {
+            // Back from the Dock: where it was, as it was.
+            d.strips[space, default: Strip()].restore(id, at: place, focus: focus)
+            return space
+        }
         let rule = settings.rule(for: managed[id]?.bundleID)
         let width = rule?.width ?? settings.defaultWidth
         switch (append, rule?.position ?? .nextToFocus) {
@@ -445,6 +463,9 @@ final class WindowManager: ObservableObject, WindowTrackerDelegate {
         }
         return space
     }
+
+    /// Where minimized windows sat in their strip, to put them back there when restored.
+    private var minimizedPlaces: [WindowID: Strip.Place] = [:]
 
     private func untrack(_ id: WindowID) {
         guard let (d, space) = owner(of: id) else { return }
@@ -484,10 +505,10 @@ final class WindowManager: ObservableObject, WindowTrackerDelegate {
     func perform(_ command: Command, via binding: KeyBinding? = nil) {
         execute(command)
         // Tell what was just done, on the display it happened on.
-        guard isEnabled, command != .toggleEnabled, settings.shortcutHUD || settings.minimap,
+        guard isEnabled, command != .toggleEnabled, command != .editStrip, settings.shortcutHUD || settings.minimap,
               let d = activeDisplay, let screen = screen(for: d) else { return }
         minimap.show(displayID: d.id, screen: screen, strip: d.strip, preset: settings.layout, engine: engine(d),
-                     showMap: settings.minimap,
+                     icons: appIcons(d), showMap: settings.minimap,
                      caption: settings.shortcutHUD ? MinimapCaption(keys: binding?.keyCaps ?? [], title: command.title) : nil)
     }
 
@@ -538,8 +559,10 @@ final class WindowManager: ObservableObject, WindowTrackerDelegate {
         case .center:
             d.strip.viewportOffset = engine(d).centeredOffset(for: d.strip)
             render(d, animated: true)
+        case .toggleCentered: d.strip.toggleFocusedCentered(); relayout(d, animated: true)
         case .toggleFloat: toggleFloatOfFocusedWindow()
         case .sendToNextDisplay: sendFocusedWindowToNextDisplay(from: d)
+        case .editStrip: toggleEditor(d)
         case .toggleEnabled: break
         }
     }
@@ -631,13 +654,83 @@ final class WindowManager: ObservableObject, WindowTrackerDelegate {
         d.strip.viewportOffset = settings.layout == .strip
             ? engine.targetOffset(for: d.strip)
             : engine.presetOffset(for: d.strip, preset: settings.layout)
+        // The minimap appears for shortcuts (see perform) and when a window joins this strip.
+        let windows = Set(d.strip.allWindows)
+        let known = d.knownWindows[d.spaceID]
+        d.knownWindows[d.spaceID] = windows
+        if animated, let known, !windows.subtracting(known).isEmpty { showMinimap(d) }
         render(d, animated: animated)
+        if stripEditor.isVisible, stripEditor.displayID == d.id {
+            stripEditor.update(strip: d.strip, tiles: overviewTiles(d))
+        }
+    }
+
+    // MARK: - Strip editor
+
+    private func toggleEditor(_ d: Display) {
+        if stripEditor.isVisible {
+            stripEditor.hide()
+            return
+        }
+        guard let screen = screen(for: d) else { return }
+        let area = engine(d).area
+        stripEditor.show(displayID: d.id, screen: screen, aspect: area.width / max(area.height, 1),
+                         widths: settings.presetWidths)
+        stripEditor.update(strip: d.strip, tiles: overviewTiles(d))
+    }
+
+    private func editorAction(_ action: StripEditAction) {
+        guard let d = stripEditor.displayID.flatMap(display(withID:)) else {
+            stripEditor.hide()
+            return
+        }
+        switch action {
+        case .drop(let id, let target): d.strip.drop(id, on: target, share: false)
+        case .width(let id, let width): d.strip.setWidth(width, for: id)
+        case .toggleTabs(let id): d.strip.toggleTabbed(containing: id)
+        case .toggleCentered(let id): d.strip.toggleCentered(containing: id)
+        case .focus(let id):
+            stripEditor.hide()
+            d.strip.focus(id)
+            activeDisplayID = d.id
+            activate(managed[id]?.window)
+        case .close:
+            stripEditor.hide()
+            return
+        }
+        relayout(d, animated: true)
+    }
+
+    /// Icon and title of every window on `d`, for the miniature overviews.
+    private func overviewTiles(_ d: Display) -> [WindowID: OverviewTile] {
+        var tiles: [WindowID: OverviewTile] = [:]
+        for id in d.strip.allWindows {
+            guard let w = managed[id]?.window else { continue }
+            let app = NSRunningApplication(processIdentifier: w.pid)
+            let title = w.title.isEmpty ? (app?.localizedName ?? "") : w.title
+            tiles[id] = OverviewTile(icon: app?.icon, title: title)
+        }
+        return tiles
+    }
+
+    private func showMinimap(_ d: Display) {
+        guard settings.minimap, let screen = screen(for: d) else { return }
+        minimap.show(displayID: d.id, screen: screen, strip: d.strip, preset: settings.layout, engine: engine(d),
+                     icons: appIcons(d))
+    }
+
+    /// The app icon of every window on `d`, for the minimap tiles.
+    private func appIcons(_ d: Display) -> [WindowID: NSImage] {
+        var icons: [WindowID: NSImage] = [:]
+        for id in d.strip.allWindows {
+            if let pid = managed[id]?.window.pid, let icon = NSRunningApplication(processIdentifier: pid)?.icon {
+                icons[id] = icon
+            }
+        }
+        return icons
     }
 
     private func render(_ d: Display, animated: Bool) {
-        if animated && settings.minimap, let screen = screen(for: d) {
-            minimap.show(displayID: d.id, screen: screen, strip: d.strip, preset: settings.layout, engine: engine(d))
-        }
         let target = d.strip.viewportOffset
         if animated && settings.animate {
             d.animator.animate(to: target) { [weak self, weak d] offset in
@@ -759,6 +852,8 @@ final class WindowManager: ObservableObject, WindowTrackerDelegate {
         } else {
             dimOverlay.hide()
         }
+        // Sign-in sheets stay above the strip (and the dimming) whatever gets focus.
+        for m in managed.values where m.keepOnTop && !m.minimized && !m.hidden { m.window.raise() }
     }
 
     /// A tab was clicked: show that window in its column and focus it.
@@ -853,7 +948,8 @@ final class WindowManager: ObservableObject, WindowTrackerDelegate {
     func windowAppeared(_ window: AXWindow, initial: Bool) {
         guard managed[window.id] == nil, let fallback = activeDisplay ?? displays.first else { return }
         let bundleID = NSRunningApplication(processIdentifier: window.pid)?.bundleIdentifier
-        let floating = !window.isStandardWindow || !window.isResizable || settings.shouldFloat(bundleID)
+        let webSheet = bundleID.map(Self.webSheetBundleIDs.contains) == true || window.isModal
+        let floating = webSheet || !window.isStandardWindow || !window.isResizable || settings.shouldFloat(bundleID)
         // A window belongs to the display it opened on.
         let frame = window.frame
         let d = frame.flatMap(bestDisplay) ?? fallback
@@ -862,7 +958,9 @@ final class WindowManager: ObservableObject, WindowTrackerDelegate {
         m.minimized = window.isMinimized
         m.fullscreen = window.isFullscreen
         m.hidden = NSRunningApplication(processIdentifier: window.pid)?.isHidden ?? false
+        m.keepOnTop = webSheet
         managed[window.id] = m
+        if webSheet { window.raise() }
         guard m.isTileable else { return }
 
         if initial {
@@ -879,6 +977,7 @@ final class WindowManager: ObservableObject, WindowTrackerDelegate {
     func windowDestroyed(_ id: WindowID) {
         let d = display(of: id)
         fullscreenReturn.removeValue(forKey: id)
+        minimizedPlaces.removeValue(forKey: id)
         managed.removeValue(forKey: id)
         lastApplied.removeValue(forKey: id)
         lastSetTime.removeValue(forKey: id)
@@ -898,6 +997,7 @@ final class WindowManager: ObservableObject, WindowTrackerDelegate {
         switch notification {
         case kAXWindowMiniaturizedNotification:
             m.minimized = true
+            if let (d, space) = owner(of: id), let place = d.strips[space]?.place(of: id) { minimizedPlaces[id] = place }
         case kAXWindowDeminiaturizedNotification:
             m.minimized = false
         default:
@@ -1133,15 +1233,15 @@ final class WindowManager: ObservableObject, WindowTrackerDelegate {
               let screen = screen(for: d) else { return }
 
         let maxSize = CGSize(width: screen.visibleFrame.width * 0.8, height: screen.visibleFrame.height * 0.8)
-        let overview = Overview.make(strip: d.strip, preset: settings.layout, engine: engine(d), maxSize: maxSize)
-        var tiles: [WindowID: OverviewTile] = [:]
-        for id in d.strip.allWindows {
-            guard let w = managed[id]?.window else { continue }
-            let app = NSRunningApplication(processIdentifier: w.pid)
-            let title = w.title.isEmpty ? (app?.localizedName ?? "") : w.title
-            tiles[id] = OverviewTile(icon: app?.icon, title: title)
+        let strip = d.strip, engine = engine(d)
+        let overview = Overview.make(strip: strip, preset: settings.layout, engine: engine, maxSize: maxSize)
+        // Strip mode previews the drop: the strip as it would be, windows moving aside live.
+        let preview: ((StripDrop?) -> Overview)? = settings.layout != .strip ? nil : { drop in
+            var s = strip
+            if let drop { s.drop(id, on: drop, share: true) }
+            return Overview.make(strip: s, preset: .strip, engine: engine, maxSize: maxSize)
         }
-        dragOverview.show(overview: overview, tiles: tiles, dragged: id, on: screen)
+        dragOverview.show(overview: overview, tiles: overviewTiles(d), dragged: id, on: screen, preview: preview)
         dragOverview.updateHover(mouse: NSEvent.mouseLocation)
     }
 
@@ -1150,19 +1250,27 @@ final class WindowManager: ObservableObject, WindowTrackerDelegate {
         defer { draggedID = nil }
         guard let id = draggedID, dragOverview.isVisible else { return }
         let target = dragOverview.hoveredTarget
-        dragOverview.hide()
-        guard let target, let d = display(of: id) else { return }
+        let drop = dragOverview.stripDrop
+        guard let d = display(of: id), drop != nil || target != nil else {
+            dragOverview.hide()
+            return
+        }
+        // The overview already shows the result: leave it a moment while the windows get there.
+        dragOverview.hide(after: 0.35)
         pendingUserChanges.remove(id)
         if settings.layout == .strip {
-            d.strip.move(id, to: target.index)
-        } else if target.windowID != nil {
-            d.strip.swap(id, withIndex: target.index)
-        } else {
-            d.strip.move(id, to: d.strip.columns.count - 1)
+            if let drop { d.strip.drop(id, on: drop, share: true) }
+        } else if let target {
+            if target.windowID != nil {
+                d.strip.swap(id, withIndex: target.index)
+            } else {
+                d.strip.move(id, to: d.strip.columns.count - 1)
+            }
         }
         d.strip.focus(id)
         lastApplied.removeValue(forKey: id)
         activate(managed[id]?.window)
+        relayout(d, animated: true)
     }
 
     private func applyUserChanges() {

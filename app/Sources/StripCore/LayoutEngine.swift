@@ -30,18 +30,28 @@ public struct LayoutEngine: Sendable {
         (column.width * (area.width + innerGap) - innerGap).rounded()
     }
 
-    /// Left edge of every column in strip coordinates (first column starts at 0).
+    /// Room the column takes in the strip: its width, or a whole screen when centered.
+    public func slotWidth(of column: Column) -> CGFloat {
+        column.centered ? area.width : pixelWidth(of: column)
+    }
+
+    /// Left edge of every column's slot in strip coordinates (first column starts at 0).
     public func columnOrigins(_ strip: Strip) -> [CGFloat] {
         var x: CGFloat = 0
         return strip.columns.map { col in
-            defer { x += pixelWidth(of: col) + innerGap }
+            defer { x += slotWidth(of: col) + innerGap }
             return x
         }
     }
 
+    /// Where the windows of a column start inside its slot (the left margin of a centered column).
+    public func inset(of column: Column) -> CGFloat {
+        column.centered ? ((area.width - pixelWidth(of: column)) / 2).rounded() : 0
+    }
+
     public func totalWidth(_ strip: Strip) -> CGFloat {
         guard let last = strip.columns.last else { return 0 }
-        return columnOrigins(strip).last! + pixelWidth(of: last)
+        return columnOrigins(strip).last! + slotWidth(of: last)
     }
 
     /// The viewport offset that should be used after focus or widths changed.
@@ -49,7 +59,7 @@ public struct LayoutEngine: Sendable {
         guard let f = strip.focusedIndex else { return 0 }
         let origins = columnOrigins(strip)
         let x = origins[f]
-        let w = pixelWidth(of: strip.columns[f])
+        let w = slotWidth(of: strip.columns[f])
         let total = totalWidth(strip)
         let centered = x + w / 2 - area.width / 2
 
@@ -71,7 +81,7 @@ public struct LayoutEngine: Sendable {
     public func centeredOffset(for strip: Strip) -> CGFloat {
         guard let f = strip.focusedIndex else { return strip.viewportOffset }
         let x = columnOrigins(strip)[f]
-        return x + pixelWidth(of: strip.columns[f]) / 2 - area.width / 2
+        return x + slotWidth(of: strip.columns[f]) / 2 - area.width / 2
     }
 
     /// Frames for every column given a viewport offset.
@@ -87,7 +97,7 @@ public struct LayoutEngine: Sendable {
     /// The rect of every column (its whole stack) at a viewport offset.
     public func columnRects(for strip: Strip, offset: CGFloat) -> [CGRect] {
         zip(strip.columns, columnOrigins(strip)).map { col, x in
-            CGRect(x: (area.minX + x - offset).rounded(), y: area.minY,
+            CGRect(x: (area.minX + x + inset(of: col) - offset).rounded(), y: area.minY,
                    width: pixelWidth(of: col), height: area.height)
         }
     }
@@ -153,7 +163,7 @@ public struct LayoutEngine: Sendable {
         if direction > 0 {
             // First column that is not fully visible on the right.
             guard let i = strip.columns.indices.first(where: {
-                origins[$0] + pixelWidth(of: strip.columns[$0]) > offset + area.width + 1
+                origins[$0] + slotWidth(of: strip.columns[$0]) > offset + area.width + 1
             }) else { return nil }
             target = i
         } else {

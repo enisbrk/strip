@@ -12,7 +12,7 @@ struct MenuView: View {
 
     /// The shortcuts listed right in the menu; all of them are in Settings → Shortcuts.
     private static let essentials: [Command] = [
-        .screenLeft, .screenRight, .focusLeft, .focusRight, .moveLeft, .moveRight,
+        .screenLeft, .screenRight, .editStrip, .focusLeft, .focusRight, .moveLeft, .moveRight,
         .cycleWidth, .fullWidth, .stackLeft, .popOutRight, .toggleTabbed, .toggleFloat,
     ]
 

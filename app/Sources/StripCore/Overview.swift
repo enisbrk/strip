@@ -157,7 +157,7 @@ public struct Overview: Equatable, Sendable {
         let targets = zip(strip.columns, engine.columnOrigins(strip)).enumerated().map { i, pair in
             OverviewTarget(
                 index: i,
-                rect: CGRect(x: padding + pair.1 * scale, y: top,
+                rect: CGRect(x: padding + (pair.1 + engine.inset(of: pair.0)) * scale, y: top,
                              width: engine.pixelWidth(of: pair.0) * scale, height: height).insetBy(dx: 1, dy: 0),
                 column: pair.0
             )

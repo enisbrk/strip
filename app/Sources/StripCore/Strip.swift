@@ -19,6 +19,9 @@ public struct Column: Equatable, Sendable, Codable {
     public var widthBeforeFull: CGFloat?
     /// A stack showing only its active window over the whole column (⌃⌥F on a stacked window).
     public var maximized: Bool = false
+    /// Takes a whole screen of the strip with its windows centered and empty margins on both
+    /// sides, so the next column never shows next to it.
+    public var centered: Bool = false
 
     public init(windowID: WindowID, width: CGFloat) {
         windows = [windowID]
@@ -29,7 +32,7 @@ public struct Column: Equatable, Sendable, Codable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case windows, weights, active, tabbed, width, widthBeforeFull, maximized
+        case windows, weights, active, tabbed, width, widthBeforeFull, maximized, centered
     }
 
     public init(from decoder: Decoder) throws {
@@ -42,7 +45,11 @@ public struct Column: Equatable, Sendable, Codable {
         width = try c.decodeIfPresent(CGFloat.self, forKey: .width) ?? 0.5
         widthBeforeFull = try c.decodeIfPresent(CGFloat.self, forKey: .widthBeforeFull)
         maximized = try c.decodeIfPresent(Bool.self, forKey: .maximized) ?? false
+        centered = try c.decodeIfPresent(Bool.self, forKey: .centered) ?? false
     }
+
+    /// Share of the screen the column takes in the strip: a centered column takes a whole one.
+    public var footprint: CGFloat { centered ? 1 : width }
 
     /// Only the active window is on screen (tabs, or a maximized stack); the others are parked.
     public var showsOnlyActive: Bool { isStack && (tabbed || maximized) }
@@ -86,6 +93,26 @@ public struct Column: Equatable, Sendable, Codable {
         if let r = row(of: id) { active = r }
     }
 
+    /// Adds a window at row `r`, with an average share of the height.
+    mutating func insert(_ id: WindowID, at r: Int) {
+        let r = min(max(r, 0), windows.count)
+        windows.insert(id, at: r)
+        weights.insert(weights.reduce(0, +) / CGFloat(weights.count), at: r)
+        if r <= active { active += 1 }
+    }
+
+    /// Moves one of the column's windows to row `r` (counted without it), keeping its height share.
+    mutating func moveRow(_ id: WindowID, to r: Int) {
+        guard let from = row(of: id) else { return }
+        let activeID = windowID
+        let w = weights.remove(at: from)
+        windows.remove(at: from)
+        let r = min(max(r, 0), windows.count)
+        windows.insert(id, at: r)
+        weights.insert(w, at: r)
+        active = row(of: activeID) ?? 0
+    }
+
     mutating func moveActive(by delta: Int) -> Bool {
         let target = min(max(active + delta, 0), windows.count - 1)
         guard target != active else { return false }
@@ -127,6 +154,20 @@ public struct Column: Equatable, Sendable, Codable {
 
     mutating func equalizeHeights() {
         weights = Array(repeating: 1, count: windows.count)
+    }
+}
+
+/// Where a dragged window would land: next to (edge -1 / +1) or onto (nil) the column holding `windowID`.
+public struct StripDrop: Equatable, Sendable {
+    public let windowID: WindowID
+    public let edge: Int?
+    /// Into the column, right above (-1) or below (+1) `windowID`; nil: at the bottom.
+    public let row: Int?
+
+    public init(windowID: WindowID, edge: Int?, row: Int? = nil) {
+        self.windowID = windowID
+        self.edge = edge
+        self.row = row
     }
 }
 
@@ -282,12 +323,134 @@ public struct Strip: Equatable, Sendable, Codable {
         if let focused { focus(focused) }
     }
 
+    /// Moves a window just before / after the column at `target` (`target` counts the strip as it is now).
+    public mutating func move(_ id: WindowID, beside target: Int, after: Bool) {
+        guard let from = index(of: id) else { return }
+        var index = target + (after ? 1 : 0)
+        if from < index && !columns[from].isStack { index -= 1 }
+        move(id, to: index)
+    }
+
     /// Swaps the column holding `id` with the one at `target`, keeping focus on the same window.
     public mutating func swap(_ id: WindowID, withIndex target: Int) {
         guard let i = index(of: id), columns.indices.contains(target), i != target else { return }
         let focused = focusedWindowID
         columns.swapAt(i, target)
         if let focused { focus(focused) }
+    }
+
+    // MARK: Minimize and restore
+
+    /// Where a window sat, to put it back there later (after minimizing it).
+    public struct Place: Equatable, Sendable {
+        /// A window of the column before / after it; nil at that end of the strip.
+        public let after: WindowID?
+        public let before: WindowID?
+        public let width: CGFloat
+        public let centered: Bool
+        /// It shared its screen (a stack, or columns side by side).
+        public let shared: Bool
+    }
+
+    public func place(of id: WindowID) -> Place? {
+        guard let i = index(of: id) else { return nil }
+        let c = columns[i]
+        let group = screenGroups().first { $0.contains(i) }
+        return Place(after: i > 0 ? columns[i - 1].windows[0] : nil,
+                     before: i + 1 < columns.count ? columns[i + 1].windows[0] : nil,
+                     width: c.width, centered: c.centered,
+                     shared: c.isStack || (group?.count ?? 1) > 1)
+    }
+
+    /// Puts a window back where it was: between the same neighbours, as wide and centered as it
+    /// was. A window that shared its screen comes back on a screen of its own. When neither
+    /// neighbour is still here it opens next to the focused column.
+    public mutating func restore(_ id: WindowID, at place: Place, focus: Bool) {
+        guard !contains(id) else { return }
+        let width = place.shared ? 1 : place.width
+        if let a = place.after, let i = index(of: a) {
+            insert(id, width: width, at: i + 1, focus: focus)
+        } else if let b = place.before, let i = index(of: b) {
+            insert(id, width: width, at: i, focus: focus)
+        } else if place.after == nil, place.before != nil || columns.isEmpty {
+            insert(id, width: width, at: 0, focus: focus)
+        } else {
+            insert(id, width: width, focus: focus)
+        }
+        if place.centered && !place.shared, let i = index(of: id) { columns[i].centered = true }
+    }
+
+    // MARK: Drag and drop
+
+    /// Drops `id` on a column (`target`): beside it on an edge, else stacked into it or sharing
+    /// its screen. The overviews preview a drag by applying this to a copy of the strip.
+    public mutating func drop(_ id: WindowID, on target: StripDrop, share: Bool) {
+        guard let t = index(of: target.windowID) else { return }
+        if let edge = target.edge {
+            move(id, beside: t, after: edge > 0)
+        } else if let row = target.row {
+            insert(id, nextTo: target.windowID, below: row > 0)
+        } else if share {
+            self.share(id, with: target.windowID)
+        } else {
+            stack(id, onto: target.windowID)
+        }
+    }
+
+    // MARK: Sharing a screen
+
+    /// Columns grouped into screens from the left: each group fills at most one screen width.
+    public func screenGroups() -> [Range<Int>] {
+        var groups: [Range<Int>] = []
+        var i = 0
+        while i < columns.count {
+            var j = i, width: CGFloat = 0
+            while j < columns.count, j == i || width + columns[j].footprint <= 1.01 {
+                width += columns[j].footprint
+                j += 1
+            }
+            groups.append(i..<j)
+            i = j
+        }
+        return groups
+    }
+
+    /// Drops `id` onto `targetID` (drag and drop): the two share the target's screen. One window
+    /// becomes two halves, two become a half and two quarters, three become four quarters; a full
+    /// screen gets `id` as a new full-width screen right after it.
+    public mutating func share(_ id: WindowID, with targetID: WindowID) {
+        guard id != targetID, contains(id), let source = index(of: targetID), !columns[source].contains(id) else { return }
+        _ = remove(id)
+        guard let t = index(of: targetID), let group = screenGroups().first(where: { $0.contains(t) }) else { return }
+        // A column that can take one more window as a quarter: a plain window not sharing a stack.
+        func stackable(_ i: Int) -> Bool { !columns[i].isStack && !columns[i].tabbed }
+        func isPair(_ i: Int) -> Bool { columns[i].isStack && !columns[i].tabbed && columns[i].windows.count == 2 }
+
+        if group.count == 1, stackable(t) || isPair(t) {
+            // Alone on its screen: side by side, half each.
+            columns[t].width = 0.5
+            columns[t].centered = false
+            columns.insert(Column(windowID: id, width: 0.5), at: t + 1)
+        } else if group.count == 2 {
+            let other = t == group.lowerBound ? group.upperBound - 1 : group.lowerBound
+            let into: Int?
+            switch (stackable(t), stackable(other)) {
+            case (true, _): into = t
+            case (false, true) where isPair(t): into = other
+            default: into = nil
+            }
+            if let into {
+                columns[into].append(id, activate: true)
+                columns[into].equalizeHeights()
+                columns[t].width = 0.5
+                columns[other].width = 0.5
+            } else {
+                columns.insert(Column(windowID: id, width: 1), at: group.upperBound)
+            }
+        } else {
+            columns.insert(Column(windowID: id, width: 1), at: group.upperBound)
+        }
+        focus(id)
     }
 
     // MARK: Stacks
@@ -305,6 +468,34 @@ public struct Strip: Equatable, Sendable, Codable {
         focusedIndex = t
     }
 
+    /// Puts `id` at the bottom of the column holding `targetID`, keeping focus where it was.
+    public mutating func stack(_ id: WindowID, onto targetID: WindowID) {
+        guard let from = index(of: id), let to = index(of: targetID), from != to else { return }
+        let focused = focusedWindowID
+        _ = remove(id)
+        guard let t = index(of: targetID) else { return }
+        columns[t].append(id, activate: false)
+        if let focused { focus(focused) }
+    }
+
+    /// Puts `id` into the column holding `rowID`, right above or below it (reorders a stack when
+    /// both are in the same one). Focus stays where it was.
+    public mutating func insert(_ id: WindowID, nextTo rowID: WindowID, below: Bool) {
+        guard id != rowID, let from = index(of: id), let t = index(of: rowID) else { return }
+        let focused = focusedWindowID
+        if from == t {
+            guard let r = columns[t].row(of: rowID), let own = columns[t].row(of: id) else { return }
+            var to = r + (below ? 1 : 0)
+            if own < to { to -= 1 }
+            columns[t].moveRow(id, to: to)
+        } else {
+            _ = remove(id)
+            guard let t = index(of: rowID), let r = columns[t].row(of: rowID) else { return }
+            columns[t].insert(id, at: r + (below ? 1 : 0))
+        }
+        if let focused { focus(focused) }
+    }
+
     /// Takes the focused window out of its stack into a new column to the left / right.
     public mutating func popOutFocused(direction: Int) {
         guard let f = focusedIndex, columns[f].isStack else { return }
@@ -319,6 +510,11 @@ public struct Strip: Equatable, Sendable, Codable {
     public mutating func toggleFocusedTabbed() {
         guard let f = focusedIndex, columns[f].isStack else { return }
         columns[f].tabbed.toggle()
+    }
+
+    public mutating func toggleTabbed(containing id: WindowID) {
+        guard let i = index(of: id), columns[i].isStack else { return }
+        columns[i].tabbed.toggle()
     }
 
     public mutating func adjustFocusedHeight(by delta: CGFloat) {
@@ -373,6 +569,23 @@ public struct Strip: Equatable, Sendable, Codable {
             columns[f].width = 1
             columns[f].maximized = columns[f].isStack
         }
+    }
+
+    /// Centers the focused column on a screen of its own, with empty margins (or back to normal).
+    public mutating func toggleFocusedCentered() {
+        guard let f = focusedIndex else { return }
+        toggleCentered(at: f)
+    }
+
+    public mutating func toggleCentered(containing id: WindowID) {
+        guard let i = index(of: id) else { return }
+        toggleCentered(at: i)
+    }
+
+    private mutating func toggleCentered(at i: Int) {
+        columns[i].centered.toggle()
+        // Centering a full-width column would leave no margins: start from half the screen.
+        if columns[i].centered && columns[i].width >= 0.999 && !columns[i].maximized { columns[i].width = 0.5 }
     }
 
     public mutating func adjustFocusedWidth(by delta: CGFloat) {

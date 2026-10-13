@@ -11,7 +11,10 @@ struct OverviewTile {
 @MainActor
 final class DragOverviewModel: ObservableObject {
     @Published var overview = Overview.empty
+    /// Grid presets: the slot under the pointer.
     @Published var hovered: OverviewTarget?
+    /// Strip mode: where the window would land; `overview` then already shows the strip after it.
+    @Published var stripDrop: StripDrop?
     var tiles: [WindowID: OverviewTile] = [:]
     var draggedID: WindowID?
 }
@@ -20,17 +23,27 @@ final class DragOverviewModel: ObservableObject {
 /// while a window is being dragged. The mouse is polled, so the drag itself is never interrupted.
 @MainActor
 final class DragOverview {
+    private static let spring = Animation.spring(response: 0.3, dampingFraction: 0.86)
     private let model = DragOverviewModel()
     private var panel: NSPanel?
+    /// Strip mode: the overview of the strip after a drop (nil: as it is now).
+    private var preview: ((StripDrop?) -> Overview)?
+    private var hideWork: DispatchWorkItem?
 
     var isVisible: Bool { panel?.isVisible ?? false }
     var hoveredTarget: OverviewTarget? { model.hovered }
+    var stripDrop: StripDrop? { model.stripDrop }
 
-    func show(overview: Overview, tiles: [WindowID: OverviewTile], dragged: WindowID, on screen: NSScreen) {
+    /// - Parameter preview: strip mode only; the windows then move aside live to show the drop.
+    func show(overview: Overview, tiles: [WindowID: OverviewTile], dragged: WindowID, on screen: NSScreen,
+              preview: ((StripDrop?) -> Overview)? = nil) {
+        hideWork?.cancel()
+        self.preview = preview
         model.overview = overview
         model.tiles = tiles
         model.draggedID = dragged
         model.hovered = nil
+        model.stripDrop = nil
 
         let panel = self.panel ?? makePanel()
         self.panel = panel
@@ -50,13 +63,63 @@ final class DragOverview {
     func updateHover(mouse: CGPoint) {
         guard let panel, panel.isVisible else { return }
         let local = CGPoint(x: mouse.x - panel.frame.minX, y: panel.frame.maxY - mouse.y)
-        let target = model.overview.target(at: local)
-        if target != model.hovered { model.hovered = target }
+        guard let preview else {
+            let target = model.overview.target(at: local)
+            if target != model.hovered { model.hovered = target }
+            return
+        }
+        let drop = stripDrop(at: local)
+        guard drop != model.stripDrop else { return }
+        let next = preview(drop)
+        if next.size != model.overview.size {
+            // Keep the panel centered where it was when the previewed strip changes size.
+            let old = panel.frame
+            panel.setFrame(CGRect(x: (old.midX - next.size.width / 2).rounded(), y: (old.midY - next.size.height / 2).rounded(),
+                                  width: next.size.width, height: next.size.height), display: false)
+        }
+        withAnimation(Self.spring) {
+            model.stripDrop = drop
+            model.overview = next
+        }
     }
 
-    func hide() {
-        panel?.orderOut(nil)
-        model.hovered = nil
+    /// The column under the pointer in the strip as shown. Over the dragged window's own new
+    /// place, or between columns, the current drop stays, so the preview doesn't flicker.
+    private func stripDrop(at p: CGPoint) -> StripDrop? {
+        let targets = model.overview.targets
+        guard let top = targets.map(\.rect.minY).min(), let bottom = targets.map(\.rect.maxY).max(),
+              p.y > top - 20, p.y < bottom + 20 else { return nil }
+        for t in targets {
+            guard let id = t.windowID, t.rect.insetBy(dx: -Overview.spacing / 2, dy: -20).contains(p) else { continue }
+            if t.rows.contains(where: { $0.windowID == model.draggedID }) { return model.stripDrop }
+            let band = t.rect.width * 0.25
+            return StripDrop(windowID: id, edge: p.x < t.rect.minX + band ? -1 : p.x > t.rect.maxX - band ? 1 : nil)
+        }
+        return model.stripDrop
+    }
+
+    /// - Parameter after: keeps the final arrangement on screen a moment before fading out.
+    func hide(after delay: TimeInterval = 0) {
+        hideWork?.cancel()
+        guard delay > 0, let panel else {
+            panel?.orderOut(nil)
+            model.hovered = nil
+            return
+        }
+        let work = DispatchWorkItem { [weak self, weak panel] in
+            NSAnimationContext.runAnimationGroup({ ctx in
+                ctx.duration = 0.2
+                panel?.animator().alphaValue = 0
+            }, completionHandler: {
+                MainActor.assumeIsolated {
+                    guard let panel, panel.alphaValue == 0 else { return }
+                    panel.orderOut(nil)
+                    self?.model.hovered = nil
+                }
+            })
+        }
+        hideWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
     }
 
     private func makePanel() -> NSPanel {
@@ -76,11 +139,20 @@ final class DragOverview {
 struct OverviewView: View {
     @ObservedObject var model: DragOverviewModel
 
+    /// One window of the overview; listed flat so a window keeps its identity (and animates)
+    /// when the preview moves it to another column.
+    private struct Item: Identifiable {
+        let row: OverviewRow
+        let target: Int
+        var id: WindowID { row.windowID }
+    }
+
     var body: some View {
         let o = model.overview
+        let items = o.targets.flatMap { t in t.rows.map { Item(row: $0, target: t.index) } }
         ZStack(alignment: .topLeading) {
             RoundedRectangle(cornerRadius: 16)
-                .fill(.ultraThinMaterial)
+                .fill(Color(white: 0.13).opacity(0.97))
                 .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(.white.opacity(0.15)))
 
             ForEach(Array(o.pages.enumerated()), id: \.offset) { i, page in
@@ -105,19 +177,20 @@ struct OverviewView: View {
                     .position(x: viewport.midX, y: viewport.midY)
             }
 
-            ForEach(o.targets, id: \.index) { target in
-                let hovered = model.hovered?.index == target.index
-                if target.rows.isEmpty {
-                    TileView(tile: nil, isDragged: false, isHovered: hovered)
-                        .frame(width: target.rect.width, height: target.rect.height)
-                        .position(x: target.rect.midX, y: target.rect.midY)
-                }
-                ForEach(target.rows, id: \.windowID) { row in
-                    TileView(tile: model.tiles[row.windowID], isDragged: row.windowID == model.draggedID,
-                             isHovered: hovered)
-                        .frame(width: row.rect.width, height: row.rect.height)
-                        .position(x: row.rect.midX, y: row.rect.midY)
-                }
+            ForEach(o.targets.filter(\.rows.isEmpty), id: \.index) { target in
+                TileView(tile: nil, isDragged: false, isHovered: model.hovered?.index == target.index)
+                    .frame(width: target.rect.width, height: target.rect.height)
+                    .position(x: target.rect.midX, y: target.rect.midY)
+            }
+            ForEach(items) { item in
+                let isDragged = item.row.windowID == model.draggedID
+                // Strip mode lights up where the dragged window lands; grid presets the slot.
+                let lit = model.stripDrop != nil ? isDragged : model.hovered?.index == item.target
+                TileView(tile: model.tiles[item.row.windowID], isDragged: isDragged, isHovered: lit)
+                    .frame(width: item.row.rect.width, height: item.row.rect.height)
+                    .position(x: item.row.rect.midX, y: item.row.rect.midY)
+            }
+            ForEach(o.targets.filter { $0.tabBar != nil }, id: \.index) { target in
                 if let bar = target.tabBar {
                     HStack(spacing: 2) {
                         ForEach(0..<target.tabCount, id: \.self) { i in
@@ -131,6 +204,8 @@ struct OverviewView: View {
             }
         }
         .frame(width: o.size.width, height: o.size.height)
+        // Drawn on a dark panel whatever the system appearance.
+        .environment(\.colorScheme, .dark)
         .animation(.easeOut(duration: 0.12), value: model.hovered?.index)
     }
 }

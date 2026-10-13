@@ -86,8 +86,8 @@
 
     <div class="marquee" aria-hidden="true">
       <div class="marquee__track">
-        <span data-i18n="mq.1">Scrolling strip</span><b>✦</b><span data-i18n="mq.2">Stacks &amp; tabs</span><b>✦</b><span data-i18n="mq.3">Trackpad swipe</span><b>✦</b><span data-i18n="mq.4">Preset widths</span><b>✦</b><span data-i18n="mq.5">Minimap</span><b>✦</b><span data-i18n="mq.6">Multiple displays</span><b>✦</b><span data-i18n="mq.7">Raycast &amp; CLI</span><b>✦</b>
-        <span data-i18n="mq.1">Scrolling strip</span><b>✦</b><span data-i18n="mq.2">Stacks &amp; tabs</span><b>✦</b><span data-i18n="mq.3">Trackpad swipe</span><b>✦</b><span data-i18n="mq.4">Preset widths</span><b>✦</b><span data-i18n="mq.5">Minimap</span><b>✦</b><span data-i18n="mq.6">Multiple displays</span><b>✦</b><span data-i18n="mq.7">Raycast &amp; CLI</span><b>✦</b>
+        <span data-i18n="mq.1">Scrolling strip</span><b>✦</b><span data-i18n="mq.2">Stacks &amp; tabs</span><b>✦</b><span data-i18n="mq.3">Trackpad swipe</span><b>✦</b><span data-i18n="mq.4">Preset widths</span><b>✦</b><span data-i18n="mq.5">Minimap</span><b>✦</b><span data-i18n="mq.6">Multiple displays</span><b>✦</b><span data-i18n="mq.7">Raycast &amp; CLI</span><b>✦</b><span data-i18n="mq.8">Strip editor</span><b>✦</b><span data-i18n="mq.9">Drop to share a screen</span><b>✦</b>
+        <span data-i18n="mq.1">Scrolling strip</span><b>✦</b><span data-i18n="mq.2">Stacks &amp; tabs</span><b>✦</b><span data-i18n="mq.3">Trackpad swipe</span><b>✦</b><span data-i18n="mq.4">Preset widths</span><b>✦</b><span data-i18n="mq.5">Minimap</span><b>✦</b><span data-i18n="mq.6">Multiple displays</span><b>✦</b><span data-i18n="mq.7">Raycast &amp; CLI</span><b>✦</b><span data-i18n="mq.8">Strip editor</span><b>✦</b><span data-i18n="mq.9">Drop to share a screen</span><b>✦</b>
       </div>
     </div>
 
@@ -119,6 +119,29 @@
           <p data-i18n="f.stack.d">Stack windows into one column, resize them, or flip the stack into tabs when space is tight.</p>
         </article>
 
+        <article class="card c-grape card--wide">
+          <div class="card__art art-editor" aria-hidden="true">
+            <div class="art-editor__panel">
+              <div class="art-editor__head"><span data-i18n="f.editor.art">Edit strip</span><span class="art-editor__keys"><kbd>⌃</kbd><kbd>⌥</kbd><kbd>O</kbd></span></div>
+              <div class="art-editor__groups"><s></s><s></s></div>
+              <i class="t1"><b></b></i><i class="t2"><b></b></i><i class="t3"><b></b></i><i class="t4"><b></b></i>
+              <svg class="art-editor__cursor" viewBox="0 0 24 24"><path d="M5 3l14 8-6.5 1.5L9.5 19z"/></svg>
+            </div>
+          </div>
+          <h3 data-i18n="f.editor.t">The whole strip at a glance</h3>
+          <p data-i18n="f.editor.d">Press ⌃⌥O to lay out every window as a miniature. Drag one and the others slide aside to show where it lands; drop it beside a window, above or below it to stack, pick a width, or click to jump there.</p>
+        </article>
+
+        <article class="card c-sky">
+          <div class="card__art art-share" aria-hidden="true">
+            <div class="art-share__screen">
+              <i class="w1"></i><i class="w2"></i><i class="w3"></i><i class="w4"></i>
+            </div>
+          </div>
+          <h3 data-i18n="f.share.t">Drop to share a screen</h3>
+          <p data-i18n="f.share.d">Drag a window onto another and they split its screen: two halves, then a half and two quarters, then four quarters.</p>
+        </article>
+
         <article class="card c-sky">
           <div class="card__art art-width" aria-hidden="true">
             <div class="art-width__bar"><i></i></div>
@@ -128,6 +151,17 @@
           <p data-i18n="f.width.d">Cycle through ⅓, ½, ⅔ and full width with one key, nudge wider or narrower, or center the focused column.</p>
         </article>
 
+        <article class="card c-lime">
+          <div class="card__art art-center" aria-hidden="true">
+            <div class="art-center__screen"><s></s><s></s></div>
+            <div class="art-center__stack"><i></i><i></i></div>
+            <div class="art-center__next"><i></i></div>
+            <div class="art-center__hud"><kbd>⌃</kbd><kbd>⌥</kbd><kbd>C</kbd></div>
+          </div>
+          <h3 data-i18n="f.center.t">Centered, with margins</h3>
+          <p data-i18n="f.center.d">⌃⌥C gives a column a screen of its own, centered with empty margins, so the next window never peeks in.</p>
+        </article>
+
         <article class="card c-mint">
           <div class="card__art art-swipe" aria-hidden="true">
             <div class="art-swipe__pad"><b></b><b></b><b></b></div>
@@ -135,6 +169,18 @@
           </div>
           <h3 data-i18n="f.swipe.t">Trackpad swipe</h3>
           <p data-i18n="f.swipe.d">Glide along the strip with three or four fingers. When you let go it settles on the nearest column.</p>
+        </article>
+
+        <article class="card c-peach card--wide">
+          <div class="card__art art-map" aria-hidden="true">
+            <div class="art-map__screen">
+              <i></i><i class="on"></i><i></i>
+              <div class="art-map__hud"><kbd>⌃</kbd><kbd>⌥</kbd><kbd>L</kbd></div>
+              <div class="art-map__mini"><b style="--c:var(--pink)"></b><b class="on" style="--c:var(--violet)"></b><b style="--c:var(--sky)"></b><b style="--c:var(--mint)"></b><b style="--c:var(--coral)"></b><s></s></div>
+            </div>
+          </div>
+          <h3 data-i18n="f.map.t">Always know where you are</h3>
+          <p data-i18n="f.map.d">A minimap with each app's icon shows the whole strip and your place in it, whenever you press a shortcut or a window joins. Add a focus border, dim inactive windows, and see each shortcut as you press it.</p>
         </article>
 
         <article class="card c-grape">
@@ -150,18 +196,6 @@
           <p data-i18n="f.layouts.d">Switch from the strip to full screen, two side by side, a 2×2 grid or 2+1 splits — from the menu bar or a shortcut.</p>
         </article>
 
-        <article class="card c-peach card--wide">
-          <div class="card__art art-map" aria-hidden="true">
-            <div class="art-map__screen">
-              <i></i><i class="on"></i><i></i>
-              <div class="art-map__hud"><kbd>⌃</kbd><kbd>⌥</kbd><kbd>L</kbd></div>
-              <div class="art-map__mini"><b></b><b class="on"></b><b></b><b></b><b></b><s></s></div>
-            </div>
-          </div>
-          <h3 data-i18n="f.map.t">Always know where you are</h3>
-          <p data-i18n="f.map.d">A minimap shows the whole strip and your place in it. Add a focus border, dim inactive windows, and see each shortcut as you press it.</p>
-        </article>
-
         <article class="card c-lime">
           <div class="card__art art-displays" aria-hidden="true">
             <div class="art-displays__d"><i></i><i class="fly"></i></div>
@@ -169,7 +203,7 @@
             <div class="art-displays__float"></div>
           </div>
           <h3 data-i18n="f.rules.t">App rules &amp; multiple displays</h3>
-          <p data-i18n="f.rules.d">Keep Calculator or System Settings floating, give apps their own width and position, and send windows to the next display.</p>
+          <p data-i18n="f.rules.d">Keep Calculator or System Settings floating, give apps their own width and position, and send windows to the next display. Wi-Fi sign-in sheets stay on top, out of the strip.</p>
         </article>
 
         <article class="card c-ink">
@@ -208,11 +242,14 @@
         <li><span class="combo"><kbd>[</kbd><kbd>]</kbd></span><span data-i18n="sc.stack">Stack into column left / right</span></li>
         <li><span class="combo"><kbd>R</kbd></span><span data-i18n="sc.cycle">Cycle preset widths</span></li>
         <li><span class="combo"><kbd>F</kbd></span><span data-i18n="sc.full">Full width</span></li>
-        <li><span class="combo"><kbd>C</kbd></span><span data-i18n="sc.center">Center column</span></li>
+        <li><span class="combo"><kbd>C</kbd></span><span data-i18n="sc.centerOwn">Center on its own screen</span></li>
+        <li><span class="combo"><kbd>⇧</kbd><kbd>C</kbd></span><span data-i18n="sc.center">Center column</span></li>
         <li><span class="combo"><kbd>=</kbd><kbd>−</kbd></span><span data-i18n="sc.wider">Wider / narrower</span></li>
         <li><span class="combo"><kbd>T</kbd></span><span data-i18n="sc.float">Float / tile window</span></li>
         <li><span class="combo"><kbd>1</kbd>…<kbd>9</kbd></span><span data-i18n="sc.jump">Jump to window 1–9</span></li>
         <li><span class="combo"><kbd>N</kbd></span><span data-i18n="sc.display">Send window to next display</span></li>
+        <li><span class="combo"><kbd>O</kbd></span><span data-i18n="sc.editor">Edit strip: reorder, widths, stacks</span></li>
+        <li><span class="combo"><kbd>Q</kbd></span><span data-i18n="sc.toggle">Stop / start Strip</span></li>
       </ul>
     </section>
 
