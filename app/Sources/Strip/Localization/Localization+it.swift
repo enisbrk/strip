@@ -90,6 +90,20 @@ extension Localization {
             "Larghezza",
         "Center on its own screen":
             "Centra sulla propria schermata",
+        "New screen":
+            "Nuova schermata",
+        "Side by side":
+            "Affiancate",
+        "About Strip":
+            "Informazioni su Strip",
+        "Release Notes":
+            "Note di rilascio",
+        "Scrolling window manager for macOS":
+            "Gestore di finestre a scorrimento per macOS",
+        "Version %@ (%@)":
+            "Versione %@ (%@)",
+        "Website":
+            "Sito web",
         "Equalize stack heights":
             "Uniforma le altezze della pila",
         "Essential shortcuts":

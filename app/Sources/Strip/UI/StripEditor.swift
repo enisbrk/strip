@@ -7,6 +7,7 @@ enum StripEditAction {
     case drop(WindowID, on: StripDrop)
     case width(WindowID, CGFloat)
     case toggleTabs(WindowID)
+    case sideBySide(WindowID)
     case toggleCentered(WindowID)
     case focus(WindowID)
     case close
@@ -121,6 +122,7 @@ struct StripEditorView: View {
     @State private var columnFrames: [WindowID: CGRect] = [:]
 
     private static let gap: CGFloat = 8
+    private static let screenGap: CGFloat = 20
     private static let space = "stripEditor"
     private static let spring = Animation.spring(response: 0.3, dampingFraction: 0.86)
     private var height: CGFloat { (model.unit / max(model.aspect, 0.1)).rounded() }
@@ -168,7 +170,7 @@ struct StripEditorView: View {
 
     private var content: some View {
         let strip = shown
-        return HStack(alignment: .top, spacing: 14) {
+        return HStack(alignment: .top, spacing: Self.screenGap) {
             ForEach(Array(strip.screenGroups().enumerated()), id: \.offset) { n, group in
                 VStack(alignment: .leading, spacing: 6) {
                     Text(L("Screen %d", n + 1))
@@ -180,9 +182,10 @@ struct StripEditorView: View {
                         }
                     }
                 }
-                .padding(8)
+                .padding(10)
                 .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.primary.opacity(0.05)))
             }
+            if dragged != nil && !settling { newScreenSlot }
         }
         .coordinateSpace(name: Self.space)
         .onPreferenceChange(Frames.self) { tileFrames = $0 }
@@ -191,6 +194,20 @@ struct StripEditorView: View {
         .gesture(DragGesture(minimumDistance: 4, coordinateSpace: .named(Self.space))
             .onChanged(dragChanged)
             .onEnded { _ in dragEnded() })
+    }
+
+    /// Shown while dragging: drop here (or between screens) for a screen of its own.
+    private var newScreenSlot: some View {
+        VStack(spacing: 6) {
+            Image(systemName: "plus.rectangle.on.rectangle").font(.system(size: 18, weight: .medium))
+            Text(L("New screen")).font(.system(size: 10, weight: .semibold))
+        }
+        .foregroundStyle(Color.accentColor)
+        .frame(width: max(model.unit * 0.4, 90), height: height)
+        .background(RoundedRectangle(cornerRadius: 12, style: .continuous)
+            .strokeBorder(Color.accentColor.opacity(0.7), style: StrokeStyle(lineWidth: 1.5, dash: [5, 4])))
+        .padding(.top, 26)
+        .transition(.opacity)
     }
 
     private func column(_ c: Column, focusedID: WindowID?) -> some View {
@@ -281,9 +298,10 @@ struct StripEditorView: View {
         }
     }
 
-    /// The spot under the pointer in the strip as shown: a column's edge (beside it) or a window's
-    /// upper / lower half (above / below it). Over the dragged window's own new place, or between
-    /// columns, the current target stays, so the preview doesn't flicker.
+    /// The spot under the pointer in the strip as shown: a column's edge (beside it), a window's
+    /// upper / lower half (above / below it), or outside the columns of a screen (a new screen
+    /// there). Over the dragged window's own new place the current target stays, so the preview
+    /// doesn't flicker.
     private func dropTarget(at p: CGPoint) -> StripDrop? {
         guard let dragged else { return nil }
         let strip = shown
@@ -291,7 +309,7 @@ struct StripEditorView: View {
         guard let top = rows.map(\.minY).min(), let bottom = rows.map(\.maxY).max(),
               p.y > top - 40, p.y < bottom + 40 else { return nil }
         for c in strip.columns {
-            guard let r = columnFrames[c.windows[0]], r.insetBy(dx: -Self.gap / 2 - 4, dy: -24).contains(p) else { continue }
+            guard let r = columnFrames[c.windows[0]], r.insetBy(dx: -Self.gap / 2, dy: -24).contains(p) else { continue }
             let own = c.contains(dragged)
             // Its own plain column: wherever it goes there, nothing changes.
             if own && !c.isStack { return target }
@@ -305,14 +323,64 @@ struct StripEditorView: View {
             guard row != dragged, let f = tileFrames[row] else { return target }
             return StripDrop(windowID: row, edge: nil, row: p.y < f.midY ? -1 : 1)
         }
+        // Outside the columns: the margin of a screen, the space between screens or past the end
+        // puts the window on a screen of its own there.
+        let groups = strip.screenGroups()
+        guard !groups.isEmpty else { return target }
+        func frame(_ i: Int) -> CGRect? { columnFrames[strip.columns[i].windows[0]] }
+        func anchor(_ i: Int) -> WindowID? {
+            let c = strip.columns[i]
+            if c.contains(dragged) && !c.isStack { return nil }
+            return c.windows.first { $0 != dragged }
+        }
+        if let first = frame(groups[0].lowerBound), p.x < first.minX {
+            return anchor(0).map { StripDrop(windowID: $0, edge: -1, newScreen: true) } ?? target
+        }
+        for (n, g) in groups.enumerated() {
+            guard let last = frame(g.upperBound - 1), p.x > last.maxX else { continue }
+            let nextStart = n + 1 < groups.count ? frame(groups[n + 1].lowerBound)?.minX ?? .infinity : .infinity
+            guard p.x < nextStart else { continue }
+            // Its own lone column ends this screen: the neighbour on the other side anchors it.
+            if let a = anchor(g.upperBound - 1) { return StripDrop(windowID: a, edge: 1, newScreen: true) }
+            if n + 1 < groups.count, let a = anchor(groups[n + 1].lowerBound) {
+                return StripDrop(windowID: a, edge: -1, newScreen: true)
+            }
+            return target
+        }
         return target
     }
 
     private func controls(_ c: Column) -> some View {
-        // Narrow columns drop the percent signs and tighten up.
-        ViewThatFits(in: .horizontal) {
-            controlRow(c, compact: false)
-            controlRow(c, compact: true)
+        VStack(spacing: 4) {
+            // Narrow columns drop the percent signs and tighten up.
+            ViewThatFits(in: .horizontal) {
+                controlRow(c, compact: false)
+                controlRow(c, compact: true)
+            }
+            if c.isStack { stackRow(c) }
+        }
+    }
+
+    private func stackRow(_ c: Column) -> some View {
+        HStack(spacing: 3) {
+            Button { model.onAction(.toggleTabs(c.windowID)) } label: {
+                Image(systemName: c.tabbed ? "rectangle.split.1x2" : "menubar.rectangle")
+                    .font(.system(size: 10, weight: .semibold))
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 3)
+                    .background(Capsule().fill(Color.primary.opacity(0.08)))
+            }
+            .buttonStyle(.plain)
+            .help(L("Show stack as tabs / rows"))
+            Button { model.onAction(.sideBySide(c.windowID)) } label: {
+                Image(systemName: "rectangle.split.2x1")
+                    .font(.system(size: 10, weight: .semibold))
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 3)
+                    .background(Capsule().fill(Color.primary.opacity(0.08)))
+            }
+            .buttonStyle(.plain)
+            .help(L("Side by side"))
         }
     }
 
@@ -341,17 +409,6 @@ struct StripEditorView: View {
             }
             .buttonStyle(.plain)
             .help(L("Center on its own screen"))
-            if c.isStack {
-                Button { model.onAction(.toggleTabs(c.windowID)) } label: {
-                    Image(systemName: c.tabbed ? "rectangle.split.1x2" : "menubar.rectangle")
-                        .font(.system(size: 10, weight: .semibold))
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 3)
-                        .background(Capsule().fill(Color.primary.opacity(0.08)))
-                }
-                .buttonStyle(.plain)
-                .help(L("Show stack as tabs / rows"))
-            }
         }
     }
 

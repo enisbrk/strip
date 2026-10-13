@@ -163,11 +163,14 @@ public struct StripDrop: Equatable, Sendable {
     public let edge: Int?
     /// Into the column, right above (-1) or below (+1) `windowID`; nil: at the bottom.
     public let row: Int?
+    /// With `edge`: on a screen of its own (full width) before / after that column.
+    public let newScreen: Bool
 
-    public init(windowID: WindowID, edge: Int?, row: Int? = nil) {
+    public init(windowID: WindowID, edge: Int?, row: Int? = nil, newScreen: Bool = false) {
         self.windowID = windowID
         self.edge = edge
         self.row = row
+        self.newScreen = newScreen
     }
 }
 
@@ -388,6 +391,10 @@ public struct Strip: Equatable, Sendable, Codable {
         guard let t = index(of: target.windowID) else { return }
         if let edge = target.edge {
             move(id, beside: t, after: edge > 0)
+            if target.newScreen, let i = index(of: id) {
+                columns[i].width = 1
+                columns[i].centered = false
+            }
         } else if let row = target.row {
             insert(id, nextTo: target.windowID, below: row > 0)
         } else if share {
@@ -510,6 +517,18 @@ public struct Strip: Equatable, Sendable, Codable {
     public mutating func toggleFocusedTabbed() {
         guard let f = focusedIndex, columns[f].isStack else { return }
         columns[f].tabbed.toggle()
+    }
+
+    /// Turns a stack into columns side by side that share its width.
+    public mutating func unstack(containing id: WindowID) {
+        guard let i = index(of: id), columns[i].isStack else { return }
+        let focused = focusedWindowID
+        let stack = columns.remove(at: i)
+        let width = Column.clamp(stack.width / CGFloat(stack.windows.count))
+        for (k, window) in stack.windows.enumerated() {
+            columns.insert(Column(windowID: window, width: width), at: i + k)
+        }
+        if let focused { focus(focused) }
     }
 
     public mutating func toggleTabbed(containing id: WindowID) {

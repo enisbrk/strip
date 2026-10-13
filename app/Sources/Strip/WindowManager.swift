@@ -689,6 +689,7 @@ final class WindowManager: ObservableObject, WindowTrackerDelegate {
         case .width(let id, let width): d.strip.setWidth(width, for: id)
         case .toggleTabs(let id): d.strip.toggleTabbed(containing: id)
         case .toggleCentered(let id): d.strip.toggleCentered(containing: id)
+        case .sideBySide(let id): d.strip.unstack(containing: id)
         case .focus(let id):
             stripEditor.hide()
             d.strip.focus(id)

@@ -61,6 +61,7 @@ struct MenuView: View {
             .disabled(!updater.canCheckForUpdates)
 
         Divider()
+        Button(L("About Strip")) { AboutWindow.show(updater: updater) }
         settingsButton
         Button(L("Quit Strip")) { NSApp.terminate(nil) }
             .keyboardShortcut("q")
@@ -122,7 +123,7 @@ enum SettingsWindow {
             ($0.isVisible || $0.isMiniaturized) && !($0 is NSPanel) && $0.styleMask.contains(.titled)
         }
         return candidates.first(where: { $0.identifier?.rawValue.contains("Settings") == true })
-            ?? candidates.first(where: { $0.title != L("Welcome to Strip") })
+            ?? candidates.first(where: { $0.title != L("Welcome to Strip") && $0.title != L("About Strip") })
     }
 
     private static func focus() {

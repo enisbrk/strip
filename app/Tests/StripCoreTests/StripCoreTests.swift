@@ -714,6 +714,28 @@ final class EditTests: XCTestCase {
         XCTAssertEqual(s.columns.map(\.windows), [[3, 1], [2]])
     }
 
+    func testDropOnNewScreen() {
+        var s = strip(3)
+        s.drop(2, on: StripDrop(windowID: 3, edge: 1, newScreen: true), share: false)
+        XCTAssertEqual(s.columns.map(\.windowID), [1, 3, 2])
+        XCTAssertEqual(s.columns.map(\.width), [0.5, 0.5, 1])
+        s.stack(1, onto: 3)
+        s.drop(1, on: StripDrop(windowID: 3, edge: -1, newScreen: true), share: false)
+        XCTAssertEqual(s.columns.map(\.windows), [[1], [3], [2]])
+        XCTAssertEqual(s.columns[0].width, 1)
+    }
+
+    func testUnstackSharesWidth() {
+        var s = strip(3)
+        s.setWidth(1, for: 1)
+        s.stack(2, onto: 1)
+        s.focus(3)
+        s.unstack(containing: 1)
+        XCTAssertEqual(s.columns.map(\.windows), [[1], [2], [3]])
+        XCTAssertEqual(s.columns.map(\.width), [0.5, 0.5, 0.5])
+        XCTAssertEqual(s.focusedWindowID, 3)
+    }
+
     func testStackKeepsFocus() {
         var s = strip(3)
         s.focus(3)

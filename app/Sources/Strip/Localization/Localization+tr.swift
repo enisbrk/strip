@@ -90,6 +90,20 @@ extension Localization {
             "Genişlik",
         "Center on its own screen":
             "Kendi ekranında ortala",
+        "New screen":
+            "Yeni ekran",
+        "Side by side":
+            "Yan yana",
+        "About Strip":
+            "Strip Hakkında",
+        "Release Notes":
+            "Sürüm Notları",
+        "Scrolling window manager for macOS":
+            "macOS için kayan pencere yöneticisi",
+        "Version %@ (%@)":
+            "Sürüm %@ (%@)",
+        "Website":
+            "Web sitesi",
         "Equalize stack heights":
             "Stack yüksekliklerini eşitle",
         "Essential shortcuts":
