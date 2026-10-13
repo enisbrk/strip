@@ -6,6 +6,15 @@
     <description>Strip updates</description>
     <language>en</language>
     <item>
+      <title>Version 1.1.1</title>
+      <pubDate>Tue, 13 Oct 2026 14:22:57 +0300</pubDate>
+      <sparkle:version>3</sparkle:version>
+      <sparkle:shortVersionString>1.1.1</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[<p>Edit strip (⌃⌥O): drag a window between screens or onto the New screen slot to give it a screen of its own, and turn a stack into windows side by side. New About Strip window in the menu.</p>]]></description>
+      <enclosure url="https://github.com/enisbrk/strip/releases/download/v1.1.1/Strip-1.1.1.dmg" type="application/octet-stream" sparkle:edSignature="OBG0tCG4raniDwZycdccUK+j45Y2eGgfIvZb0Ln7C0e7a69ZSC1XKhHcA/BM0Y9gKbpUeT+UgGkYY+Qi1wTCDw==" length="7876877"/>
+    </item>
+    <item>
       <title>Version 1.1.0</title>
       <pubDate>Tue, 13 Oct 2026 12:50:42 +0300</pubDate>
       <sparkle:version>2</sparkle:version>

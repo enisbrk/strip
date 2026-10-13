@@ -1,6 +1,6 @@
 // Where the download button points. GitHub serves the newest release asset under this fixed name.
 const DOWNLOAD_URL = "https://github.com/enisbrk/strip/releases/latest/download/Strip.dmg";
-const VERSION = "1.1.0";
+const VERSION = "1.1.1";
 
 /* ---------------- Language ---------------- */
 
