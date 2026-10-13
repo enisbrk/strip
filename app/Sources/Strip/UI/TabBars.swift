@@ -66,7 +66,7 @@ final class TabBars {
         panel.isOpaque = false
         panel.backgroundColor = .clear
         panel.hasShadow = false
-        panel.collectionBehavior = [.fullScreenAuxiliary, .ignoresCycle]
+        panel.collectionBehavior = [.fullScreenAuxiliary, .ignoresCycle, .transient]
         panel.contentView = NSHostingView(rootView: TabBarView(model: model))
         return (displayID, panel, model)
     }
