@@ -6,6 +6,15 @@
     <description>Strip updates</description>
     <language>en</language>
     <item>
+      <title>Version 1.3.0</title>
+      <pubDate>Thu, 15 Oct 2026 22:09:41 +0300</pubDate>
+      <sparkle:version>5</sparkle:version>
+      <sparkle:shortVersionString>1.3.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[<p>Close a window and the windows left on its screen now widen to fill it, instead of the next screen's windows sliding in. Turn it off in Settings → Layout. The Center column command was removed; ⌃⌥C still centers a window on its own screen.</p>]]></description>
+      <enclosure url="https://github.com/enisbrk/strip/releases/download/v1.3.0/Strip-1.3.0.dmg" type="application/octet-stream" sparkle:edSignature="EG5+CZz1f2GOe5oE4aC6ggDVu32jI7nuYxG22fE+aYUI8EBi2naQ6+jB4cjj7lZ3Pk7XLzsWM25DHFyhhz8oDA==" length="7980750"/>
+    </item>
+    <item>
       <title>Version 1.2.0</title>
       <pubDate>Thu, 15 Oct 2026 21:01:17 +0300</pubDate>
       <sparkle:version>4</sparkle:version>
