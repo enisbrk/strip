@@ -20,8 +20,6 @@ extension Localization {
             "Autorisation d’accessibilité requise",
         "Add App":
             "Ajouter une app",
-        "Always":
-            "Toujours",
         "Always first":
             "Toujours en premier",
         "Always last":
@@ -44,10 +42,6 @@ extension Localization {
             "Revenir au raccourci par défaut",
         "Behavior":
             "Comportement",
-        "Center column":
-            "Centrer la colonne",
-        "Centering":
-            "Centrage",
         "Check Again":
             "Vérifier à nouveau",
         "Command-line tool":
@@ -84,6 +78,10 @@ extension Localization {
             "Moteur",
         "Edit strip":
             "Modifier la bande",
+        "Fill the screen when a window closes":
+            "Remplir l’écran à la fermeture d’une fenêtre",
+        "The windows left on that screen widen to fill it. When off, the next screen's windows slide into the gap.":
+            "Les fenêtres restantes sur cet écran s’élargissent pour le remplir. Désactivé, les fenêtres de l’écran suivant glissent dans l’espace libre.",
         "← → to choose · Return to focus · drag windows to reorder or stack · drag a screen by its name or edge to move it · Esc to close":
             "← → pour choisir · Retour pour activer · faites glisser les fenêtres pour réordonner ou empiler · faites glisser un écran par son nom ou son bord pour le déplacer · Échap pour fermer",
         "Width":
@@ -170,8 +168,6 @@ extension Localization {
             "Monter la fenêtre dans la pile",
         "Narrower":
             "Plus étroite",
-        "Never":
-            "Jamais",
         "New window width":
             "Largeur des nouvelles fenêtres",
         "Next":
@@ -314,8 +310,6 @@ extension Localization {
             "Nous avons vérifié les réglages de macOS et les apps qui influent sur le bon fonctionnement de Strip.",
         "Welcome to Strip":
             "Bienvenue dans Strip",
-        "When the strip overflows":
-            "Quand la bande déborde",
         "Wider":
             "Plus large",
         "Window above in stack / previous tab":

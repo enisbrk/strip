@@ -20,8 +20,6 @@ extension Localization {
             "Serve il permesso di accessibilità",
         "Add App":
             "Aggiungi app",
-        "Always":
-            "Sempre",
         "Always first":
             "Sempre per prima",
         "Always last":
@@ -44,10 +42,6 @@ extension Localization {
             "Torna all'abbreviazione predefinita",
         "Behavior":
             "Comportamento",
-        "Center column":
-            "Centra la colonna",
-        "Centering":
-            "Centratura",
         "Check Again":
             "Controlla di nuovo",
         "Command-line tool":
@@ -84,6 +78,10 @@ extension Localization {
             "Motore",
         "Edit strip":
             "Modifica striscia",
+        "Fill the screen when a window closes":
+            "Riempi lo schermo quando si chiude una finestra",
+        "The windows left on that screen widen to fill it. When off, the next screen's windows slide into the gap.":
+            "Le finestre rimaste su quello schermo si allargano per riempirlo. Se disattivato, le finestre dello schermo successivo scorrono nello spazio vuoto.",
         "← → to choose · Return to focus · drag windows to reorder or stack · drag a screen by its name or edge to move it · Esc to close":
             "← → per scegliere · Invio per attivare · trascina le finestre per riordinarle o impilarle · trascina uno schermo dal nome o dal bordo per spostarlo · Esc per chiudere",
         "Width":
@@ -170,8 +168,6 @@ extension Localization {
             "Sposta la finestra su nella pila",
         "Narrower":
             "Più stretta",
-        "Never":
-            "Mai",
         "New window width":
             "Larghezza delle nuove finestre",
         "Next":
@@ -314,8 +310,6 @@ extension Localization {
             "Abbiamo controllato le impostazioni di macOS e le app che influiscono sul funzionamento di Strip.",
         "Welcome to Strip":
             "Benvenuto in Strip",
-        "When the strip overflows":
-            "Quando la striscia trabocca",
         "Wider":
             "Più larga",
         "Window above in stack / previous tab":

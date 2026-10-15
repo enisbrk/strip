@@ -459,7 +459,7 @@ final class WindowManager: ObservableObject, WindowTrackerDelegate {
 
     private func untrack(_ id: WindowID) {
         guard let (d, space) = owner(of: id) else { return }
-        d.strips[space]?.remove(id)
+        d.strips[space]?.remove(id, fillScreen: settings.fillScreenOnClose)
     }
 
     /// The display whose frame shows most of `frame`.
@@ -546,9 +546,6 @@ final class WindowManager: ObservableObject, WindowTrackerDelegate {
             relayout(d, animated: true)
         case .wider: d.strip.adjustFocusedWidth(by: settings.widthStep); relayout(d, animated: true)
         case .narrower: d.strip.adjustFocusedWidth(by: -settings.widthStep); relayout(d, animated: true)
-        case .center:
-            d.strip.viewportOffset = engine(d).centeredOffset(for: d.strip)
-            render(d, animated: true)
         case .toggleCentered: d.strip.toggleFocusedCentered(); relayout(d, animated: true)
         case .toggleFloat: toggleFloatOfFocusedWindow()
         case .sendToNextDisplay: sendFocusedWindowToNextDisplay(from: d)
@@ -582,7 +579,7 @@ final class WindowManager: ObservableObject, WindowTrackerDelegate {
         managed[window.id] = m
         let d = display(of: window.id) ?? display(withID: m.displayID) ?? activeDisplay
         if m.floating {
-            d?.strip.remove(window.id)
+            d?.strip.remove(window.id, fillScreen: settings.fillScreenOnClose)
             lastApplied.removeValue(forKey: window.id)
             if let d {
                 let area = engine(d).area
@@ -610,7 +607,7 @@ final class WindowManager: ObservableObject, WindowTrackerDelegate {
     /// Moves a column to another display's strip, after its focused column or at `index`.
     private func move(_ id: WindowID, from source: Display, to target: Display, at index: Int?) {
         let width = source.strip.columns.first { $0.windowID == id }?.width ?? settings.defaultWidth
-        source.strip.remove(id)
+        source.strip.remove(id, fillScreen: settings.fillScreenOnClose)
         target.strip.insert(id, width: width, focus: true)
         if let index { target.strip.move(id, to: index) }
         managed[id]?.displayID = target.id

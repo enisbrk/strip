@@ -95,7 +95,7 @@ final class LayoutEngineTests: XCTestCase {
     }
 
     func testFramesNoOverlapWithGaps() {
-        let e = LayoutEngine(area: area, innerGap: 10, centerMode: .never)
+        let e = LayoutEngine(area: area, innerGap: 10)
         let s = strip([0.5, 0.5, 0.3], focus: 0)
         let f = e.frames(for: s, offset: 0)
         XCTAssertEqual(f[1], CGRect(x: 10, y: 30, width: 495, height: 700))
@@ -104,7 +104,7 @@ final class LayoutEngineTests: XCTestCase {
     }
 
     func testScrollsToTheFocusedColumnsScreen() {
-        let e = LayoutEngine(area: area, innerGap: 10, centerMode: .never)
+        let e = LayoutEngine(area: area, innerGap: 10)
         var s = strip([0.5, 0.5, 0.5, 0.5], focus: 2)
         // Screens [0 | 1] at 0 and [2 | 3] at 1010: focus on 2 shows the second screen.
         XCTAssertEqual(e.targetOffset(for: s), 1010)
@@ -114,38 +114,23 @@ final class LayoutEngineTests: XCTestCase {
     }
 
     func testHalfFilledScreenDoesNotShowTheNextScreen() {
-        let e = LayoutEngine(area: area, innerGap: 10, centerMode: .always)
+        let e = LayoutEngine(area: area, innerGap: 10)
         // Screens [0.5] (0.6 doesn't fit next to it) and [0.6]: the second starts a screen later.
         let s = strip([0.5, 0.6], focus: 0)
         XCTAssertEqual(e.columnOrigins(s), [0, 1010])
         XCTAssertEqual(e.targetOffset(for: s), 0)
-        XCTAssertEqual(e.centeredOffset(for: s), 0)
         XCTAssertEqual(e.totalWidth(s), 2010)
         XCTAssertEqual(e.frames(for: s, offset: 0)[2]?.minX, 1020)
     }
 
     func testNeverModeNoScrollWhenFits() {
-        let e = LayoutEngine(area: area, innerGap: 10, centerMode: .never)
+        let e = LayoutEngine(area: area, innerGap: 10)
         let s = strip([0.4, 0.4], focus: 1)
         XCTAssertEqual(e.targetOffset(for: s), 0)
     }
 
-    func testAlwaysCenters() {
-        let e = LayoutEngine(area: area, innerGap: 10, centerMode: .always)
-        let s = strip([0.5, 0.5, 0.5], focus: 1)
-        // Column 1 shares the first screen with column 0: that screen stays put.
-        XCTAssertEqual(e.targetOffset(for: s), 0)
-    }
-
-    func testOnOverflowOnlyCentersWhenOverflowing() {
-        let e = LayoutEngine(area: area, innerGap: 10, centerMode: .onOverflow)
-        XCTAssertEqual(e.targetOffset(for: strip([0.4, 0.4], focus: 1)), 0)
-        XCTAssertEqual(e.targetOffset(for: strip([0.5, 0.5, 0.5], focus: 1)), 0)
-        XCTAssertEqual(e.targetOffset(for: strip([0.5, 0.5, 0.5], focus: 2)), 1010)
-    }
-
     func testColumnIndexAtX() {
-        let e = LayoutEngine(area: area, innerGap: 10, centerMode: .never)
+        let e = LayoutEngine(area: area, innerGap: 10)
         let s = strip([0.5, 0.5, 0.5], focus: 0)
         XCTAssertEqual(e.columnIndex(atScreenX: 100, strip: s, offset: 0), 0)
         XCTAssertEqual(e.columnIndex(atScreenX: 600, strip: s, offset: 0), 1)
@@ -206,7 +191,7 @@ final class LayoutEngineTests: XCTestCase {
     }
 
     func testStripScreenStep() {
-        let e = LayoutEngine(area: area, innerGap: 10, centerMode: .never)
+        let e = LayoutEngine(area: area, innerGap: 10)
         // Columns of 495 px at 0, 505, 1010, 1515 — exactly two per screen.
         var s = strip([0.5, 0.5, 0.5, 0.5], focus: 0)
         let next = e.screenStep(s, direction: 1)
@@ -222,7 +207,7 @@ final class LayoutEngineTests: XCTestCase {
     }
 
     func testOverviewStripColumnsAndViewport() {
-        let e = LayoutEngine(area: area, innerGap: 10, centerMode: .never)
+        let e = LayoutEngine(area: area, innerGap: 10)
         var s = strip([0.5, 0.5, 0.5, 0.5], focus: 2)
         s.viewportOffset = 1010
         let o = Overview.make(strip: s, engine: e, maxSize: CGSize(width: 1000, height: 800))
@@ -277,7 +262,7 @@ final class StackTests: XCTestCase {
     }
 
     func testStackRowsAndHeights() {
-        let e = LayoutEngine(area: CGRect(x: 0, y: 0, width: 1000, height: 810), innerGap: 10, centerMode: .never)
+        let e = LayoutEngine(area: CGRect(x: 0, y: 0, width: 1000, height: 810), innerGap: 10)
         var s = strip([1, 2])
         s.focus(2)
         s.stackFocused(direction: -1)
@@ -293,7 +278,7 @@ final class StackTests: XCTestCase {
     }
 
     func testTabbedShowsOnlyActiveUnderTabBar() {
-        let e = LayoutEngine(area: CGRect(x: 0, y: 0, width: 1000, height: 800), innerGap: 10, centerMode: .never)
+        let e = LayoutEngine(area: CGRect(x: 0, y: 0, width: 1000, height: 800), innerGap: 10)
         var s = strip([1, 2])
         s.focus(2)
         s.stackFocused(direction: -1)
@@ -344,7 +329,7 @@ final class StackTests: XCTestCase {
 
 final class SettleTests: XCTestCase {
     func testSettlesOnNearestScreenAndRespectsFling() {
-        let e = LayoutEngine(area: CGRect(x: 0, y: 0, width: 1000, height: 800), innerGap: 10, centerMode: .never)
+        let e = LayoutEngine(area: CGRect(x: 0, y: 0, width: 1000, height: 800), innerGap: 10)
         var s = Strip()
         [1, 2, 3, 4].forEach { s.append($0, width: 0.5) } // screens at 0 and 1010
         XCTAssertEqual(e.settle(s, offset: 300)?.index, 0)
@@ -389,7 +374,7 @@ final class SettingsTests: XCTestCase {
 
 final class OverviewStackTests: XCTestCase {
     func testStackedColumnShowsRowsAndTabs() {
-        let e = LayoutEngine(area: CGRect(x: 0, y: 0, width: 1000, height: 800), innerGap: 10, centerMode: .never)
+        let e = LayoutEngine(area: CGRect(x: 0, y: 0, width: 1000, height: 800), innerGap: 10)
         var s = Strip()
         [1, 2, 3].forEach { s.append($0, width: 0.5) }
         s.focus(2)
@@ -415,7 +400,7 @@ final class OverviewStackTests: XCTestCase {
 }
 
 final class MaximizeTests: XCTestCase {
-    let e = LayoutEngine(area: CGRect(x: 0, y: 0, width: 1000, height: 800), innerGap: 10, centerMode: .never)
+    let e = LayoutEngine(area: CGRect(x: 0, y: 0, width: 1000, height: 800), innerGap: 10)
 
     func testFullWidthOnAStackedWindowFillsTheScreen() {
         var s = Strip()
@@ -518,7 +503,7 @@ final class ShareTests: XCTestCase {
 }
 
 final class CenteredTests: XCTestCase {
-    private let engine = LayoutEngine(area: CGRect(x: 0, y: 0, width: 1000, height: 600), innerGap: 0, centerMode: .never)
+    private let engine = LayoutEngine(area: CGRect(x: 0, y: 0, width: 1000, height: 600), innerGap: 0)
 
     func testCenteredColumnTakesWholeScreenWithMargins() {
         var s = Strip()
@@ -745,7 +730,7 @@ final class EditTests: XCTestCase {
     }
 
     func testSnapAloneOnItsScreen() {
-        let e = LayoutEngine(area: CGRect(x: 0, y: 0, width: 1000, height: 800), innerGap: 10, centerMode: .never)
+        let e = LayoutEngine(area: CGRect(x: 0, y: 0, width: 1000, height: 800), innerGap: 10)
         var s = Strip()
         s.append(1, width: 1)
         s.append(2, width: 0.5)
@@ -786,5 +771,28 @@ final class EditTests: XCTestCase {
         XCTAssertEqual(s.focusedWindowID, 3)
         s.toggleTabbed(containing: 1)
         XCTAssertTrue(s.columns[0].tabbed)
+    }
+}
+
+final class CloseFillsScreenTests: XCTestCase {
+    func testWindowLeftAloneOnItsScreenTakesTheWholeScreen() {
+        var s = Strip()
+        s.append(1, width: 0.5)
+        s.append(2, width: 0.5)
+        s.append(3, width: 0.5)
+        s.append(4, width: 0.5)
+        s.remove(2, fillScreen: true)
+        XCTAssertEqual(s.columns.map(\.width), [1, 0.5, 0.5])
+        XCTAssertEqual(s.screenGroups(), [0..<1, 1..<3])
+    }
+
+    func testRemainingColumnsShareTheScreen() {
+        var s = Strip()
+        s.append(1, width: 0.5)
+        s.append(2, width: 0.25)
+        s.append(3, width: 0.25)
+        s.append(4, width: 1)
+        s.remove(1, fillScreen: true)
+        XCTAssertEqual(s.columns.map(\.width), [0.5, 0.5, 1])
     }
 }

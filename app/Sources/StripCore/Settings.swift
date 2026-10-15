@@ -1,14 +1,5 @@
 import CoreGraphics
 
-public enum CenterMode: String, Codable, CaseIterable, Sendable {
-    /// Scroll only as far as needed to make the focused column fully visible.
-    case never
-    /// Center the focused column only when the strip is wider than the screen.
-    case onOverflow
-    /// Always center the focused column.
-    case always
-}
-
 /// Where an app's new windows join the strip.
 public enum AppPosition: String, Codable, CaseIterable, Sendable {
     /// Next to the focused column (the default for every app).
@@ -47,7 +38,6 @@ public struct Settings: Codable, Equatable, Sendable {
     public var presetWidths: [CGFloat] = [1.0 / 3.0, 0.5, 2.0 / 3.0, 1.0]
     public var defaultWidth: CGFloat = 0.5
     public var widthStep: CGFloat = 0.1
-    public var centerMode: CenterMode = .never
     public var animate: Bool = true
     public var focusBorder: Bool = false
     public var dimInactive: Bool = false
@@ -68,6 +58,9 @@ public struct Settings: Codable, Equatable, Sendable {
     public var disabledDisplays: [String] = []
     public var focusFollowsMouse: Bool = false
     public var mouseFollowsFocus: Bool = false
+    /// When a window leaves a screen, the windows left on it widen to fill it. Off, the next
+    /// screen's windows slide into the gap.
+    public var fillScreenOnClose: Bool = true
     /// Interface language code (en, tr, es, fr, it); nil follows the system language.
     public var language: String?
 
@@ -80,9 +73,9 @@ public struct Settings: Codable, Equatable, Sendable {
     public init() {}
 
     private enum CodingKeys: String, CodingKey {
-        case outerGap, innerGap, presetWidths, defaultWidth, widthStep, centerMode, animate
+        case outerGap, innerGap, presetWidths, defaultWidth, widthStep, animate
         case focusBorder, dimInactive, dimAmount, minimap, shortcutHUD, trackpadFingers
-        case appRules, disabledDisplays, focusFollowsMouse, mouseFollowsFocus, language
+        case appRules, disabledDisplays, focusFollowsMouse, mouseFollowsFocus, fillScreenOnClose, language
         /// Read only, to migrate settings saved before app rules.
         case floatingBundleIDs
     }
@@ -94,7 +87,6 @@ public struct Settings: Codable, Equatable, Sendable {
         try c.encode(presetWidths, forKey: .presetWidths)
         try c.encode(defaultWidth, forKey: .defaultWidth)
         try c.encode(widthStep, forKey: .widthStep)
-        try c.encode(centerMode, forKey: .centerMode)
         try c.encode(animate, forKey: .animate)
         try c.encode(focusBorder, forKey: .focusBorder)
         try c.encode(dimInactive, forKey: .dimInactive)
@@ -106,6 +98,7 @@ public struct Settings: Codable, Equatable, Sendable {
         try c.encode(disabledDisplays, forKey: .disabledDisplays)
         try c.encode(focusFollowsMouse, forKey: .focusFollowsMouse)
         try c.encode(mouseFollowsFocus, forKey: .mouseFollowsFocus)
+        try c.encode(fillScreenOnClose, forKey: .fillScreenOnClose)
         try c.encodeIfPresent(language, forKey: .language)
     }
 
@@ -118,7 +111,6 @@ public struct Settings: Codable, Equatable, Sendable {
         presetWidths = try c.decodeIfPresent([CGFloat].self, forKey: .presetWidths) ?? d.presetWidths
         defaultWidth = try c.decodeIfPresent(CGFloat.self, forKey: .defaultWidth) ?? d.defaultWidth
         widthStep = try c.decodeIfPresent(CGFloat.self, forKey: .widthStep) ?? d.widthStep
-        centerMode = try c.decodeIfPresent(CenterMode.self, forKey: .centerMode) ?? d.centerMode
         animate = try c.decodeIfPresent(Bool.self, forKey: .animate) ?? d.animate
         focusBorder = try c.decodeIfPresent(Bool.self, forKey: .focusBorder) ?? d.focusBorder
         dimInactive = try c.decodeIfPresent(Bool.self, forKey: .dimInactive) ?? d.dimInactive
@@ -135,6 +127,7 @@ public struct Settings: Codable, Equatable, Sendable {
         disabledDisplays = try c.decodeIfPresent([String].self, forKey: .disabledDisplays) ?? d.disabledDisplays
         focusFollowsMouse = try c.decodeIfPresent(Bool.self, forKey: .focusFollowsMouse) ?? d.focusFollowsMouse
         mouseFollowsFocus = try c.decodeIfPresent(Bool.self, forKey: .mouseFollowsFocus) ?? d.mouseFollowsFocus
+        fillScreenOnClose = try c.decodeIfPresent(Bool.self, forKey: .fillScreenOnClose) ?? d.fillScreenOnClose
         language = try c.decodeIfPresent(String.self, forKey: .language)
     }
 }

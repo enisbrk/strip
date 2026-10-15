@@ -290,11 +290,16 @@ public struct Strip: Equatable, Sendable, Codable {
     }
 
     /// Removes a window. Returns the column it was the last window of, if that column went away.
+    /// With `fillScreen` (the window left the strip: closed, minimized, floated) the columns left
+    /// on that column's screen grow to fill it, so the next screen's columns never slide into the gap.
     @discardableResult
-    public mutating func remove(_ id: WindowID) -> Column? {
+    public mutating func remove(_ id: WindowID, fillScreen: Bool = false) -> Column? {
         guard let i = index(of: id) else { return nil }
         if columns[i].remove(id) { return nil }
-        return removeColumn(at: i)
+        let left = !fillScreen ? [] : screenGroups().first { $0.contains(i) }.map { $0.filter { $0 != i }.map { columns[$0].windowID } } ?? []
+        let removed = removeColumn(at: i)
+        fitScreen(left)
+        return removed
     }
 
     /// Removes and returns the whole column holding `id` (all of its windows).

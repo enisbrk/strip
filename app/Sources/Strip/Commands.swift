@@ -8,7 +8,7 @@ enum Command: Hashable {
     case focusUp, focusDown, moveUp, moveDown
     case stackLeft, stackRight, popOutLeft, popOutRight, toggleTabbed
     case taller, shorter, equalizeHeights
-    case cycleWidth, fullWidth, center, toggleCentered, wider, narrower
+    case cycleWidth, fullWidth, toggleCentered, wider, narrower
     case toggleFloat
     case sendToNextDisplay
     case editStrip
@@ -40,7 +40,6 @@ enum Command: Hashable {
         case .moveRight: L("Move window right")
         case .cycleWidth: L("Cycle preset widths")
         case .fullWidth: L("Full width")
-        case .center: L("Center column")
         case .toggleCentered: L("Center on its own screen")
         case .wider: L("Wider")
         case .narrower: L("Narrower")
@@ -77,7 +76,6 @@ enum Command: Hashable {
         case .moveRight: "move-right"
         case .cycleWidth: "cycle-width"
         case .fullWidth: "full-width"
-        case .center: "center"
         case .toggleCentered: "toggle-centered"
         case .wider: "wider"
         case .narrower: "narrower"
@@ -127,7 +125,6 @@ enum Command: Hashable {
             (.focusLast, [k(kVK_End)]),
             (.cycleWidth, [k(kVK_ANSI_R)]),
             (.fullWidth, [k(kVK_ANSI_F)]),
-            (.center, [k(kVK_ANSI_C, shift: true)]),
             (.toggleCentered, [k(kVK_ANSI_C)]),
             (.wider, [k(kVK_ANSI_Equal)]),
             (.narrower, [k(kVK_ANSI_Minus)]),

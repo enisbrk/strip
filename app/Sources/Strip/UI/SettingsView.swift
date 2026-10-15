@@ -42,11 +42,8 @@ private struct GeneralSettings: View {
                         Text("\(Int((w * 100).rounded()))%").tag(w)
                     }
                 }
-                Picker(L("Centering"), selection: $store.settings.centerMode) {
-                    Text(L("Never")).tag(CenterMode.never)
-                    Text(L("When the strip overflows")).tag(CenterMode.onOverflow)
-                    Text(L("Always")).tag(CenterMode.always)
-                }
+                Toggle(L("Fill the screen when a window closes"), isOn: $store.settings.fillScreenOnClose)
+                    .help(L("The windows left on that screen widen to fill it. When off, the next screen's windows slide into the gap."))
             }
             Section(L("Appearance")) {
                 Toggle(L("Focus border"), isOn: $store.settings.focusBorder)

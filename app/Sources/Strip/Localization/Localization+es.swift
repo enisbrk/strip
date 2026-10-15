@@ -20,8 +20,6 @@ extension Localization {
             "Se necesita permiso de accesibilidad",
         "Add App":
             "Añadir app",
-        "Always":
-            "Siempre",
         "Always first":
             "Siempre al principio",
         "Always last":
@@ -44,10 +42,6 @@ extension Localization {
             "Volver al atajo predeterminado",
         "Behavior":
             "Comportamiento",
-        "Center column":
-            "Centrar columna",
-        "Centering":
-            "Centrado",
         "Check Again":
             "Comprobar de nuevo",
         "Command-line tool":
@@ -84,6 +78,10 @@ extension Localization {
             "Motor",
         "Edit strip":
             "Editar tira",
+        "Fill the screen when a window closes":
+            "Llenar la pantalla al cerrar una ventana",
+        "The windows left on that screen widen to fill it. When off, the next screen's windows slide into the gap.":
+            "Las ventanas que quedan en esa pantalla se ensanchan para llenarla. Si está desactivado, las ventanas de la siguiente pantalla ocupan el hueco.",
         "← → to choose · Return to focus · drag windows to reorder or stack · drag a screen by its name or edge to move it · Esc to close":
             "← → para elegir · Retorno para enfocar · arrastra ventanas para reordenar o apilar · arrastra una pantalla por su nombre o borde para moverla · Esc para cerrar",
         "Width":
@@ -170,8 +168,6 @@ extension Localization {
             "Subir la ventana en la pila",
         "Narrower":
             "Más estrecha",
-        "Never":
-            "Nunca",
         "New window width":
             "Ancho de las ventanas nuevas",
         "Next":
@@ -314,8 +310,6 @@ extension Localization {
             "Hemos revisado los ajustes de macOS y las apps que afectan al funcionamiento de Strip.",
         "Welcome to Strip":
             "Bienvenido a Strip",
-        "When the strip overflows":
-            "Cuando la tira desborda",
         "Wider":
             "Más ancha",
         "Window above in stack / previous tab":

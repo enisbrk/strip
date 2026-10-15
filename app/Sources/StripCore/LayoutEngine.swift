@@ -6,13 +6,11 @@ public struct LayoutEngine: Sendable {
     /// Usable area: the screen's visible frame already inset by the outer gap.
     public var area: CGRect
     public var innerGap: CGFloat
-    public var centerMode: CenterMode
     public var outerGap: CGFloat
 
-    public init(area: CGRect, innerGap: CGFloat, centerMode: CenterMode, outerGap: CGFloat = 0) {
+    public init(area: CGRect, innerGap: CGFloat, outerGap: CGFloat = 0) {
         self.area = area
         self.innerGap = innerGap
-        self.centerMode = centerMode
         self.outerGap = outerGap
     }
 
@@ -20,7 +18,6 @@ public struct LayoutEngine: Sendable {
         self.init(
             area: visibleFrame.insetBy(dx: settings.outerGap, dy: settings.outerGap),
             innerGap: settings.innerGap,
-            centerMode: settings.centerMode,
             outerGap: settings.outerGap
         )
     }
@@ -86,7 +83,7 @@ public struct LayoutEngine: Sendable {
 
     /// The viewport offset that should be used after focus or widths changed: the start of the
     /// focused column's screen. Only a screen wider than the display (one very wide column)
-    /// scrolls within itself, as `centerMode` says.
+    /// scrolls within itself, just enough to show the focused column.
     public func targetOffset(for strip: Strip) -> CGFloat {
         guard let f = strip.focusedIndex else { return 0 }
         if let page = page(of: f, in: pages(strip)), page.width <= area.width + 0.5 { return page.start }
@@ -94,29 +91,11 @@ public struct LayoutEngine: Sendable {
         let x = origins[f]
         let w = slotWidth(of: strip.columns[f])
         let total = totalWidth(strip)
-        let centered = x + w / 2 - area.width / 2
-
-        switch centerMode {
-        case .always:
-            return centered
-        case .onOverflow:
-            return total <= area.width ? 0 : centered
-        case .never:
-            if total <= area.width { return 0 }
-            var offset = strip.viewportOffset
-            if x < offset { offset = x }
-            if x + w > offset + area.width { offset = x + w - area.width }
-            return min(max(offset, 0), total - area.width)
-        }
-    }
-
-    /// Offset that centers the focused column, regardless of `centerMode`.
-    /// A screen that fits the display stays at its start, so no other screen shows.
-    public func centeredOffset(for strip: Strip) -> CGFloat {
-        guard let f = strip.focusedIndex else { return strip.viewportOffset }
-        if let page = page(of: f, in: pages(strip)), page.width <= area.width + 0.5 { return page.start }
-        let x = columnOrigins(strip)[f]
-        return x + slotWidth(of: strip.columns[f]) / 2 - area.width / 2
+        if total <= area.width { return 0 }
+        var offset = strip.viewportOffset
+        if x < offset { offset = x }
+        if x + w > offset + area.width { offset = x + w - area.width }
+        return min(max(offset, 0), total - area.width)
     }
 
     /// Frames for every column given a viewport offset.

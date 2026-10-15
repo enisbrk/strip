@@ -20,8 +20,6 @@ extension Localization {
             "Erişilebilirlik izni gerekli",
         "Add App":
             "Uygulama Ekle",
-        "Always":
-            "Her zaman",
         "Always first":
             "Hep en başa",
         "Always last":
@@ -44,10 +42,6 @@ extension Localization {
             "Varsayılan kısayola dön",
         "Behavior":
             "Davranış",
-        "Center column":
-            "Sütunu ortala",
-        "Centering":
-            "Ortalama",
         "Check Again":
             "Yeniden Denetle",
         "Command-line tool":
@@ -84,6 +78,10 @@ extension Localization {
             "Motor",
         "Edit strip":
             "Şeridi düzenle",
+        "Fill the screen when a window closes":
+            "Bir pencere kapanınca ekranı doldur",
+        "The windows left on that screen widen to fill it. When off, the next screen's windows slide into the gap.":
+            "O ekranda kalan pencereler ekranı dolduracak şekilde genişler. Kapalıyken sonraki ekranın pencereleri boşluğa kayar.",
         "← → to choose · Return to focus · drag windows to reorder or stack · drag a screen by its name or edge to move it · Esc to close":
             "← → ile seç · odaklanmak için Return · pencereleri sıralamak ya da yığınlamak için sürükle · ekranı taşımak için adından ya da kenarından sürükle · kapatmak için Esc",
         "Width":
@@ -170,8 +168,6 @@ extension Localization {
             "Pencereyi stack içinde yukarı taşı",
         "Narrower":
             "Daralt",
-        "Never":
-            "Asla",
         "New window width":
             "Yeni pencere genişliği",
         "Next":
@@ -314,8 +310,6 @@ extension Localization {
             "Strip'in iyi çalışmasını etkileyen macOS ayarlarını ve uygulamaları denetledik.",
         "Welcome to Strip":
             "Strip'e hoş geldiniz",
-        "When the strip overflows":
-            "Şerit taştığında",
         "Wider":
             "Genişlet",
         "Window above in stack / previous tab":
