@@ -84,8 +84,8 @@ extension Localization {
             "Motor",
         "Edit strip":
             "Şeridi düzenle",
-        "Drag to reorder · drop above or below a window to stack · click to focus · Esc to close":
-            "Sıralamak için sürükle · yığınlamak için bir pencerenin üstüne ya da altına bırak · odaklanmak için tıkla · kapatmak için Esc",
+        "← → to choose · Return to focus · drag windows to reorder or stack · drag a screen by its name or edge to move it · Esc to close":
+            "← → ile seç · odaklanmak için Return · pencereleri sıralamak ya da yığınlamak için sürükle · ekranı taşımak için adından ya da kenarından sürükle · kapatmak için Esc",
         "Width":
             "Genişlik",
         "Center on its own screen":
@@ -122,10 +122,6 @@ extension Localization {
             "Soldaki pencereye odaklan",
         "Focus window on the right":
             "Sağdaki pencereye odaklan",
-        "Four (2 top, 2 bottom)":
-            "4'lü (2 üstte, 2 altta)",
-        "Full screen":
-            "Tam ekran",
         "Full width":
             "Tam genişlik",
         "Gap at screen edges":
@@ -274,8 +270,6 @@ extension Localization {
             "Strip'i Durdur",
         "Stopped":
             "Durduruldu",
-        "Strip (scrolling)":
-            "Şerit (kaydırmalı)",
         "Strip can move windows.":
             "Strip pencereleri taşıyabilir.",
         "Strip leaves windows on a display you turn off alone. Drag a window from there to a managed display and it joins the strip. Each display has its own strip; ⌃⌥N sends the focused window to the next display.":
@@ -296,14 +290,6 @@ extension Localization {
             "Hepsi Control + Option ile başlar. Ayarlar → Kısayollar'dan değiştirebilirsiniz.",
         "This is the only permission Strip needs to move and resize other apps' windows. Strip doesn't record or send anything.":
             "Strip'in diğer uygulamaların pencerelerini taşıyıp boyutlandırabilmesi için gereken tek izin bu. Strip hiçbir şey kaydetmez ya da göndermez.",
-        "Three (1 left, 2 right)":
-            "3'lü (1 solda, 2 sağda)",
-        "Three (1 top, 2 bottom)":
-            "3'lü (1 üstte, 2 altta)",
-        "Three (2 left, 1 right)":
-            "3'lü (2 solda, 1 sağda)",
-        "Three (2 top, 1 bottom)":
-            "3'lü (2 üstte, 1 altta)",
         "Tile":
             "Şeride al",
         "Tile windows by dragging them to screen edges":
@@ -318,8 +304,6 @@ extension Localization {
             "Trackpad ile kaydırma kapalı; Ayarlar'dan açabilirsiniz.",
         "Turn Strip on in System Settings → Privacy & Security → Accessibility; this page updates by itself once it's allowed.":
             "Sistem Ayarları → Gizlilik ve Güvenlik → Erişilebilirlik'te Strip'i açın; izin gelince bu sayfa kendiliğinden güncellenir.",
-        "Two side by side":
-            "2'li yan yana",
         "Type the keys… (Esc to cancel)":
             "Tuşlara basın… (Esc: iptal)",
         "URL scheme: %@":

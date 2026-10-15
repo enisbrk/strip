@@ -103,16 +103,25 @@ final class LayoutEngineTests: XCTestCase {
         XCTAssertEqual(f[3], CGRect(x: 1020, y: 30, width: 293, height: 700))
     }
 
-    func testNeverModeScrollsMinimally() {
+    func testScrollsToTheFocusedColumnsScreen() {
         let e = LayoutEngine(area: area, innerGap: 10, centerMode: .never)
         var s = strip([0.5, 0.5, 0.5, 0.5], focus: 2)
-        // Column 2 spans 1010...1505 → right edge must align with viewport right edge.
-        XCTAssertEqual(e.targetOffset(for: s), 505)
-        s.viewportOffset = 505
-        s.focus(index: 1) // spans 505...1000, already visible → no scroll
-        XCTAssertEqual(e.targetOffset(for: s), 505)
-        s.focus(index: 0)
+        // Screens [0 | 1] at 0 and [2 | 3] at 1010: focus on 2 shows the second screen.
+        XCTAssertEqual(e.targetOffset(for: s), 1010)
+        s.viewportOffset = 1010
+        s.focus(index: 1)
         XCTAssertEqual(e.targetOffset(for: s), 0)
+    }
+
+    func testHalfFilledScreenDoesNotShowTheNextScreen() {
+        let e = LayoutEngine(area: area, innerGap: 10, centerMode: .always)
+        // Screens [0.5] (0.6 doesn't fit next to it) and [0.6]: the second starts a screen later.
+        let s = strip([0.5, 0.6], focus: 0)
+        XCTAssertEqual(e.columnOrigins(s), [0, 1010])
+        XCTAssertEqual(e.targetOffset(for: s), 0)
+        XCTAssertEqual(e.centeredOffset(for: s), 0)
+        XCTAssertEqual(e.totalWidth(s), 2010)
+        XCTAssertEqual(e.frames(for: s, offset: 0)[2]?.minX, 1020)
     }
 
     func testNeverModeNoScrollWhenFits() {
@@ -124,14 +133,15 @@ final class LayoutEngineTests: XCTestCase {
     func testAlwaysCenters() {
         let e = LayoutEngine(area: area, innerGap: 10, centerMode: .always)
         let s = strip([0.5, 0.5, 0.5], focus: 1)
-        // Column 1 spans 505...1000, center 752.5 → offset 252.5
-        XCTAssertEqual(e.targetOffset(for: s), 252.5)
+        // Column 1 shares the first screen with column 0: that screen stays put.
+        XCTAssertEqual(e.targetOffset(for: s), 0)
     }
 
     func testOnOverflowOnlyCentersWhenOverflowing() {
         let e = LayoutEngine(area: area, innerGap: 10, centerMode: .onOverflow)
         XCTAssertEqual(e.targetOffset(for: strip([0.4, 0.4], focus: 1)), 0)
-        XCTAssertEqual(e.targetOffset(for: strip([0.5, 0.5, 0.5], focus: 1)), 252.5)
+        XCTAssertEqual(e.targetOffset(for: strip([0.5, 0.5, 0.5], focus: 1)), 0)
+        XCTAssertEqual(e.targetOffset(for: strip([0.5, 0.5, 0.5], focus: 2)), 1010)
     }
 
     func testColumnIndexAtX() {
@@ -195,45 +205,6 @@ final class LayoutEngineTests: XCTestCase {
         XCTAssertEqual(DisplayAssignment.bestDisplay(for: CGRect(x: 2500, y: 0, width: 100, height: 100), displays: displays), 1)
     }
 
-    func testPresetSlotsWithGaps() {
-        let e = LayoutEngine(area: area, innerGap: 10, centerMode: .never)
-        let s = strip([0.5, 0.5, 0.5, 0.5], focus: 0)
-        let f = e.presetFrames(for: s, preset: .grid2x2, offset: 0)
-        XCTAssertEqual(f[1], CGRect(x: 10, y: 30, width: 495, height: 345))
-        XCTAssertEqual(f[2], CGRect(x: 515, y: 30, width: 495, height: 345))
-        XCTAssertEqual(f[3], CGRect(x: 10, y: 385, width: 495, height: 345))
-        XCTAssertEqual(f[4], CGRect(x: 515, y: 385, width: 495, height: 345))
-    }
-
-    func testPresetPagesSitOneScreenApart() {
-        let e = LayoutEngine(area: area, innerGap: 0, centerMode: .never)
-        // 5 windows, pages of 2: focus on index 2 shows windows 3 and 4.
-        var s = strip([0.5, 0.5, 0.5, 0.5, 0.5], focus: 2)
-        let offset = e.presetOffset(for: s, preset: .twoColumns)
-        XCTAssertEqual(offset, 1000)
-        let f = e.presetFrames(for: s, preset: .twoColumns, offset: offset)
-        XCTAssertEqual(f[3]?.minX, 10)
-        XCTAssertEqual(f[4]?.minX, 510)
-        XCTAssertLessThanOrEqual(f[1]!.maxX, area.minX)
-        XCTAssertGreaterThanOrEqual(f[5]!.minX, area.maxX)
-        // Half-way through the slide both pages are partly on screen.
-        let mid = e.presetFrames(for: s, preset: .twoColumns, offset: 500)
-        XCTAssertEqual(mid[2]?.minX, 10)
-        XCTAssertEqual(mid[3]?.minX, 510)
-        s.focus(index: 4)
-        XCTAssertEqual(e.presetOffset(for: s, preset: .twoColumns), 2000)
-    }
-
-    func testPresetScreenStep() {
-        let e = LayoutEngine(area: area, innerGap: 0, centerMode: .never)
-        let s = strip([0.5, 0.5, 0.5, 0.5, 0.5], focus: 3)
-        XCTAssertEqual(e.presetScreenStep(s, preset: .twoColumns, direction: 1), 4)
-        XCTAssertEqual(e.presetScreenStep(s, preset: .twoColumns, direction: -1), 0)
-        XCTAssertNil(e.presetScreenStep(s, preset: .grid2x2, direction: -1))
-        XCTAssertEqual(e.presetScreenStep(s, preset: .grid2x2, direction: 1), 4)
-        XCTAssertNil(e.presetScreenStep(s, preset: .full, direction: 5))
-    }
-
     func testStripScreenStep() {
         let e = LayoutEngine(area: area, innerGap: 10, centerMode: .never)
         // Columns of 495 px at 0, 505, 1010, 1515 — exactly two per screen.
@@ -250,43 +221,11 @@ final class LayoutEngineTests: XCTestCase {
         XCTAssertEqual(prev?.offset, 0)
     }
 
-    func testPresetIndexAtPoint() {
-        let e = LayoutEngine(area: area, innerGap: 0, centerMode: .never)
-        let s = strip([0.5, 0.5, 0.5], focus: 0)
-        XCTAssertEqual(e.presetIndex(at: CGPoint(x: 900, y: 600), strip: s, preset: .oneLeftTwoRight), 2)
-        XCTAssertEqual(e.presetIndex(at: CGPoint(x: 100, y: 600), strip: s, preset: .oneLeftTwoRight), 0)
-    }
-
-    func testOverviewPresetHasPagesAndSlots() {
-        let e = LayoutEngine(area: area, innerGap: 0, centerMode: .never)
-        let s = strip([0.5, 0.5, 0.5, 0.5, 0.5], focus: 0)
-        let o = Overview.make(strip: s, preset: .twoColumns, engine: e, maxSize: CGSize(width: 2000, height: 1000))
-        // 5 windows in pages of 2 → 3 pages, the last one has a free slot.
-        XCTAssertEqual(o.pages.count, 3)
-        XCTAssertEqual(o.targets.count, 6)
-        XCTAssertEqual(o.targets.map(\.windowID), [1, 2, 3, 4, 5, nil])
-        // Every target lies inside its page and is hit-testable at its center.
-        for t in o.targets {
-            XCTAssertTrue(o.pages[t.index / 2].contains(t.rect))
-            XCTAssertEqual(o.target(at: CGPoint(x: t.rect.midX, y: t.rect.midY))?.index, t.index)
-        }
-        XCTAssertLessThanOrEqual(o.size.width, 2000)
-    }
-
-    func testOverviewWrapsPagesIntoRows() {
-        let e = LayoutEngine(area: area, innerGap: 0, centerMode: .never)
-        let s = strip(Array(repeating: 1, count: 9), focus: 0)
-        let o = Overview.make(strip: s, preset: .full, engine: e, maxSize: CGSize(width: 700, height: 1000))
-        XCTAssertEqual(o.pages.count, 9)
-        XCTAssertLessThanOrEqual(o.size.width, 700)
-        XCTAssertGreaterThan(o.pages.last!.minY, o.pages.first!.minY)
-    }
-
     func testOverviewStripColumnsAndViewport() {
         let e = LayoutEngine(area: area, innerGap: 10, centerMode: .never)
         var s = strip([0.5, 0.5, 0.5, 0.5], focus: 2)
         s.viewportOffset = 1010
-        let o = Overview.make(strip: s, preset: .strip, engine: e, maxSize: CGSize(width: 1000, height: 800))
+        let o = Overview.make(strip: s, engine: e, maxSize: CGSize(width: 1000, height: 800))
         XCTAssertEqual(o.targets.map(\.index), [0, 1, 2, 3])
         XCTAssertTrue(o.viewport!.contains(o.targets[2].rect))
         XCTAssertFalse(o.viewport!.intersects(o.targets[0].rect))
@@ -404,13 +343,13 @@ final class StackTests: XCTestCase {
 }
 
 final class SettleTests: XCTestCase {
-    func testSettlesOnNearestColumnAndRespectsFling() {
+    func testSettlesOnNearestScreenAndRespectsFling() {
         let e = LayoutEngine(area: CGRect(x: 0, y: 0, width: 1000, height: 800), innerGap: 10, centerMode: .never)
         var s = Strip()
-        [1, 2, 3, 4].forEach { s.append($0, width: 0.5) } // origins 0, 505, 1010, 1515
-        XCTAssertEqual(e.settle(s, offset: 300)?.index, 1)
-        XCTAssertEqual(e.settle(s, offset: 200)?.index, 0)
-        XCTAssertEqual(e.settle(s, offset: 200, fling: 1)?.index, 1)
+        [1, 2, 3, 4].forEach { s.append($0, width: 0.5) } // screens at 0 and 1010
+        XCTAssertEqual(e.settle(s, offset: 300)?.index, 0)
+        XCTAssertEqual(e.settle(s, offset: 600)?.index, 2)
+        XCTAssertEqual(e.settle(s, offset: 200, fling: 1)?.index, 2)
         // The last columns cannot scroll past the end of the strip.
         XCTAssertEqual(e.settle(s, offset: 1600)?.offset, 1010)
         XCTAssertEqual(e.settle(s, offset: -400, fling: -1)?.index, 0)
@@ -455,7 +394,7 @@ final class OverviewStackTests: XCTestCase {
         [1, 2, 3].forEach { s.append($0, width: 0.5) }
         s.focus(2)
         s.stackFocused(direction: -1) // [[1, 2], [3]], 2 active
-        var o = Overview.make(strip: s, preset: .strip, engine: e, maxSize: CGSize(width: 1000, height: 800))
+        var o = Overview.make(strip: s, engine: e, maxSize: CGSize(width: 1000, height: 800))
         let stack = o.targets[0]
         XCTAssertEqual(stack.rows.map(\.windowID), [1, 2])
         XCTAssertEqual(stack.rows.map(\.isActive), [false, true])
@@ -465,7 +404,7 @@ final class OverviewStackTests: XCTestCase {
         XCTAssertNil(stack.tabBar)
 
         s.toggleFocusedTabbed()
-        o = Overview.make(strip: s, preset: .twoColumns, engine: e, maxSize: CGSize(width: 1000, height: 800))
+        o = Overview.make(strip: s, engine: e, maxSize: CGSize(width: 1000, height: 800))
         XCTAssertEqual(o.targets[0].tabCount, 2)
         XCTAssertNotNil(o.targets[0].tabBar)
         XCTAssertEqual(o.targets[0].rows.map(\.windowID), [2])
@@ -723,6 +662,109 @@ final class EditTests: XCTestCase {
         s.drop(1, on: StripDrop(windowID: 3, edge: -1, newScreen: true), share: false)
         XCTAssertEqual(s.columns.map(\.windows), [[1], [3], [2]])
         XCTAssertEqual(s.columns[0].width, 1)
+    }
+
+    func testDropBesideColumnOfAFullScreenJoinsIt() {
+        // Screens: [1 | 2], [3 full]. 2 moves next to 3: 1 fills its screen, 2 and 3 share theirs.
+        var s = strip(2)
+        s.append(3, width: 1)
+        s.drop(2, on: StripDrop(windowID: 3, edge: 1, fit: true), share: false)
+        XCTAssertEqual(s.columns.map(\.windowID), [1, 3, 2])
+        XCTAssertEqual(s.columns.map(\.width), [1, 0.5, 0.5])
+        XCTAssertEqual(s.screenGroups(), [0..<1, 1..<3])
+        // Within its own screen, `fit` changes nothing but the order.
+        s.drop(2, on: StripDrop(windowID: 3, edge: -1, fit: true), share: false)
+        XCTAssertEqual(s.columns.map(\.windowID), [1, 2, 3])
+        XCTAssertEqual(s.columns.map(\.width), [1, 0.5, 0.5])
+    }
+
+    func testMoveScreen() {
+        // Screens: [1 | 2], [3]. Moving [3] first keeps both screens as they are.
+        var s = strip(2)
+        s.append(3, width: 1)
+        s.moveScreen(containing: 3, beside: 1, after: false)
+        XCTAssertEqual(s.columns.map(\.windowID), [3, 1, 2])
+        XCTAssertEqual(s.screenGroups(), [0..<1, 1..<3])
+        // [4] half wide, [5], [6] half wide: moving [6] next to [4] would merge them, so both fill.
+        var t = Strip()
+        t.append(4, width: 0.5)
+        t.append(5, width: 1)
+        t.append(6, width: 0.5)
+        t.moveScreen(containing: 6, beside: 5, after: false)
+        XCTAssertEqual(t.columns.map(\.windowID), [4, 6, 5])
+        XCTAssertEqual(t.columns.map(\.width), [1, 1, 1])
+    }
+
+    func testSnapToScreenEdges() {
+        // Screens: [1 | 2] in halves, then [3] full.
+        var s = strip(2)
+        s.append(3, width: 1)
+        // 3 against the left edge of the first screen: left half, 1 and 2 share the right half.
+        XCTAssertTrue(s.snap(3, to: .left, onScreenOf: 0))
+        XCTAssertEqual(s.columns.map(\.windowID), [3, 1, 2])
+        XCTAssertEqual(s.columns.map(\.width), [0.5, 0.25, 0.25])
+        XCTAssertEqual(s.focusedWindowID, 3)
+        // 3 against the bottom, over column 1: below it; the screen's columns fill the gap it leaves.
+        XCTAssertTrue(s.snap(3, to: .bottom, onScreenOf: 1))
+        XCTAssertEqual(s.columns.map(\.windows), [[1, 3], [2]])
+        XCTAssertEqual(s.columns.map(\.width), [0.5, 0.5])
+        // Top of its own stack, then back out to the right.
+        XCTAssertTrue(s.snap(3, to: .top, onScreenOf: 0))
+        XCTAssertEqual(s.columns.map(\.windows), [[3, 1], [2]])
+        XCTAssertTrue(s.snap(3, to: .right, onScreenOf: 0))
+        XCTAssertEqual(s.columns.map(\.windows), [[1], [2], [3]])
+        XCTAssertEqual(s.columns.map(\.width), [0.25, 0.25, 0.5])
+        // Already there: nothing to do.
+        XCTAssertFalse(s.snap(3, to: .right, onScreenOf: 2))
+    }
+
+    func testSnapToCorners() {
+        // Screens: [1 | 2] in halves, then [3] full.
+        var s = strip(2)
+        s.append(3, width: 1)
+        // Top-left corner: on top of 1, whose column keeps the left half.
+        XCTAssertTrue(s.snap(3, to: .topLeft, onScreenOf: 0))
+        XCTAssertEqual(s.columns.map(\.windows), [[3, 1], [2]])
+        XCTAssertEqual(s.columns.map(\.width), [0.5, 0.5])
+        // Bottom-right corner: below 2.
+        XCTAssertTrue(s.snap(3, to: .bottomRight, onScreenOf: 0))
+        XCTAssertEqual(s.columns.map(\.windows), [[1], [2, 3]])
+        XCTAssertEqual(s.columns.map(\.width), [0.5, 0.5])
+        // A screen with one other column: that column takes the whole screen, split in rows.
+        var t = Strip()
+        t.append(1, width: 1)
+        t.append(2, width: 1)
+        XCTAssertTrue(t.snap(2, to: .bottomLeft, onScreenOf: 0))
+        XCTAssertEqual(t.columns.map(\.windows), [[1, 2]])
+        XCTAssertEqual(t.columns[0].width, 1)
+        // Alone on its screen, a corner is a quarter of it.
+        var u = Strip()
+        u.append(1, width: 1)
+        XCTAssertTrue(u.snap(1, to: .topRight, onScreenOf: 0))
+        XCTAssertEqual(u.columns[0].pin, Column.Pin(x: 1, y: -1))
+    }
+
+    func testSnapAloneOnItsScreen() {
+        let e = LayoutEngine(area: CGRect(x: 0, y: 0, width: 1000, height: 800), innerGap: 10, centerMode: .never)
+        var s = Strip()
+        s.append(1, width: 1)
+        s.append(2, width: 0.5)
+        // Left half: the next screen's half-wide column doesn't slide in beside it.
+        XCTAssertTrue(s.snap(1, to: .left, onScreenOf: 0))
+        XCTAssertEqual(s.columns[0].width, 0.5)
+        XCTAssertEqual(s.screenGroups(), [0..<1, 1..<2])
+        XCTAssertEqual(e.frames(for: s, offset: 0)[1], CGRect(x: 0, y: 0, width: 495, height: 800))
+        XCTAssertFalse(s.snap(1, to: .left, onScreenOf: 0))
+        XCTAssertTrue(s.snap(1, to: .right, onScreenOf: 0))
+        XCTAssertEqual(e.frames(for: s, offset: 0)[1], CGRect(x: 505, y: 0, width: 495, height: 800))
+        XCTAssertTrue(s.snap(1, to: .top, onScreenOf: 0))
+        XCTAssertEqual(e.frames(for: s, offset: 0)[1], CGRect(x: 0, y: 0, width: 1000, height: 395))
+        XCTAssertTrue(s.snap(1, to: .bottomRight, onScreenOf: 0))
+        XCTAssertEqual(e.frames(for: s, offset: 0)[1], CGRect(x: 505, y: 405, width: 495, height: 395))
+        // Joining another screen lets go of the pin.
+        s.drop(2, on: StripDrop(windowID: 1, edge: nil, row: 1), share: false)
+        XCTAssertNil(s.columns[0].pin)
+        XCTAssertEqual(e.frames(for: s, offset: 0)[1]?.height, 395)
     }
 
     func testUnstackSharesWidth() {

@@ -34,13 +34,6 @@ struct MenuView: View {
         }
 
         Divider()
-        Picker(L("Layout"), selection: $store.settings.layout) {
-            ForEach(LayoutPreset.allCases, id: \.self) { preset in
-                Label { Text(L(preset.title)) } icon: { Image(nsImage: LayoutIcon.image(for: preset)) }
-                    .tag(preset)
-            }
-        }
-
         Section(L("Shortcuts")) {
             ForEach(Self.essentials, id: \.id) { command in
                 // Shows the key combination on the right like any menu item; clicking runs it too.

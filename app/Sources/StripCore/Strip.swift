@@ -22,6 +22,22 @@ public struct Column: Equatable, Sendable, Codable {
     /// Takes a whole screen of the strip with its windows centered and empty margins on both
     /// sides, so the next column never shows next to it.
     public var centered: Bool = false
+    /// Snapped alone against a side of its screen (see `Strip.snap`): keeps the whole screen,
+    /// its windows against that side, the rest of the screen left empty.
+    public var pin: Pin?
+
+    /// Where a pinned column sits on its screen.
+    public struct Pin: Equatable, Sendable, Codable {
+        /// -1 against the left side, +1 against the right side.
+        public var x: Int
+        /// -1 the top half, +1 the bottom half, 0 the whole height.
+        public var y: Int
+
+        public init(x: Int, y: Int) {
+            self.x = x
+            self.y = y
+        }
+    }
 
     public init(windowID: WindowID, width: CGFloat) {
         windows = [windowID]
@@ -32,7 +48,7 @@ public struct Column: Equatable, Sendable, Codable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case windows, weights, active, tabbed, width, widthBeforeFull, maximized, centered
+        case windows, weights, active, tabbed, width, widthBeforeFull, maximized, centered, pin
     }
 
     public init(from decoder: Decoder) throws {
@@ -46,10 +62,11 @@ public struct Column: Equatable, Sendable, Codable {
         widthBeforeFull = try c.decodeIfPresent(CGFloat.self, forKey: .widthBeforeFull)
         maximized = try c.decodeIfPresent(Bool.self, forKey: .maximized) ?? false
         centered = try c.decodeIfPresent(Bool.self, forKey: .centered) ?? false
+        pin = try c.decodeIfPresent(Pin.self, forKey: .pin)
     }
 
-    /// Share of the screen the column takes in the strip: a centered column takes a whole one.
-    public var footprint: CGFloat { centered ? 1 : width }
+    /// Share of the screen the column takes in the strip: a centered or pinned column takes a whole one.
+    public var footprint: CGFloat { centered || pin != nil ? 1 : width }
 
     /// Only the active window is on screen (tabs, or a maximized stack); the others are parked.
     public var showsOnlyActive: Bool { isStack && (tabbed || maximized) }
@@ -70,6 +87,8 @@ public struct Column: Equatable, Sendable, Codable {
     }
 
     mutating func append(_ id: WindowID, activate: Bool) {
+        // A stack fills its column: no longer pinned to a side.
+        pin = nil
         windows.append(id)
         // A new row gets an average share.
         weights.append(weights.reduce(0, +) / CGFloat(weights.count))
@@ -95,6 +114,8 @@ public struct Column: Equatable, Sendable, Codable {
 
     /// Adds a window at row `r`, with an average share of the height.
     mutating func insert(_ id: WindowID, at r: Int) {
+        // A stack fills its column: no longer pinned to a side.
+        pin = nil
         let r = min(max(r, 0), windows.count)
         windows.insert(id, at: r)
         weights.insert(weights.reduce(0, +) / CGFloat(weights.count), at: r)
@@ -157,6 +178,29 @@ public struct Column: Equatable, Sendable, Codable {
     }
 }
 
+/// A screen edge or corner a window is dragged against (see `Strip.snap`).
+public enum SnapEdge: Equatable, Sendable {
+    case left, right, top, bottom, topLeft, topRight, bottomLeft, bottomRight
+
+    /// -1 left, +1 right, 0 neither.
+    public var horizontal: Int {
+        switch self {
+        case .left, .topLeft, .bottomLeft: -1
+        case .right, .topRight, .bottomRight: 1
+        case .top, .bottom: 0
+        }
+    }
+
+    /// -1 top, +1 bottom, 0 neither.
+    public var vertical: Int {
+        switch self {
+        case .top, .topLeft, .topRight: -1
+        case .bottom, .bottomLeft, .bottomRight: 1
+        case .left, .right: 0
+        }
+    }
+}
+
 /// Where a dragged window would land: next to (edge -1 / +1) or onto (nil) the column holding `windowID`.
 public struct StripDrop: Equatable, Sendable {
     public let windowID: WindowID
@@ -165,12 +209,16 @@ public struct StripDrop: Equatable, Sendable {
     public let row: Int?
     /// With `edge`: on a screen of its own (full width) before / after that column.
     public let newScreen: Bool
+    /// With `edge`, from another screen: join that column's screen, its columns narrowing to make
+    /// room when it is full, instead of spilling onto a screen of its own.
+    public let fit: Bool
 
-    public init(windowID: WindowID, edge: Int?, row: Int? = nil, newScreen: Bool = false) {
+    public init(windowID: WindowID, edge: Int?, row: Int? = nil, newScreen: Bool = false, fit: Bool = false) {
         self.windowID = windowID
         self.edge = edge
         self.row = row
         self.newScreen = newScreen
+        self.fit = fit
     }
 }
 
@@ -390,10 +438,26 @@ public struct Strip: Equatable, Sendable, Codable {
     public mutating func drop(_ id: WindowID, on target: StripDrop, share: Bool) {
         guard let t = index(of: target.windowID) else { return }
         if let edge = target.edge {
+            // Moving onto another screen with `fit`: remember who shares the target's screen and
+            // who stays behind on the old one, to size both screens after the move.
+            var joined: [WindowID] = [], left: [WindowID] = []
+            if target.fit, !target.newScreen, let from = index(of: id) {
+                let groups = screenGroups()
+                if let to = groups.first(where: { $0.contains(t) }), let source = groups.first(where: { $0.contains(from) }),
+                   to != source {
+                    joined = to.map { columns[$0].windowID }
+                    if !columns[from].isStack { left = source.filter { $0 != from }.map { columns[$0].windowID } }
+                }
+            }
             move(id, beside: t, after: edge > 0)
+            if !joined.isEmpty {
+                fitScreen(joined + [id])
+                fitScreen(left)
+            }
             if target.newScreen, let i = index(of: id) {
                 columns[i].width = 1
                 columns[i].centered = false
+                columns[i].pin = nil
             }
         } else if let row = target.row {
             insert(id, nextTo: target.windowID, below: row > 0)
@@ -401,6 +465,121 @@ public struct Strip: Equatable, Sendable, Codable {
             self.share(id, with: target.windowID)
         } else {
             stack(id, onto: target.windowID)
+        }
+    }
+
+    /// Moves the whole screen holding `id` (all its columns, as they are) before / after the
+    /// screen holding `target`. Screens that don't fill their width are stretched first when
+    /// leaving them as they are would merge them with their new neighbour.
+    public mutating func moveScreen(containing id: WindowID, beside target: WindowID, after: Bool) {
+        let groups = screenGroups()
+        guard let i = index(of: id), let t = index(of: target),
+              let from = groups.first(where: { $0.contains(i) }), let to = groups.first(where: { $0.contains(t) }),
+              from != to else { return }
+        let focused = focusedWindowID
+        let before = columns
+        var rest = columns
+        let moving = Array(rest[from])
+        rest.removeSubrange(from)
+        let start = to.lowerBound - (from.lowerBound < to.lowerBound ? from.count : 0)
+        rest.insert(contentsOf: moving, at: after ? start + to.count : start)
+        columns = rest
+        if screenGroups().count != groups.count {
+            columns = before
+            for g in groups { fitScreen(g.map { columns[$0].windowID }) }
+            guard screenGroups().count == groups.count else { return }
+            moveScreen(containing: id, beside: target, after: after)
+        }
+        if let focused { focus(focused) }
+    }
+
+    /// Places `id` against an edge or corner of the screen holding column `column` (a window
+    /// dragged there).
+    /// - Left / right: it takes that half of the screen, the screen's other columns share the
+    ///   other half.
+    /// - Top / bottom: it goes on top of / below the windows of `column` (or the nearest other
+    ///   column).
+    /// - Corners: on top of / below the windows of the screen's first / last column, which takes
+    ///   that half of the screen (the whole screen when it is the only other column).
+    /// - Alone on its screen: it keeps the screen and goes against that side (half the width,
+    ///   or half the height for top / bottom) or into that quarter (`Column.pin`).
+    /// A screen it leaves a gap on is filled. Returns false when nothing would change.
+    @discardableResult
+    public mutating func snap(_ id: WindowID, to edge: SnapEdge, onScreenOf column: Int) -> Bool {
+        guard let from = index(of: id), columns.indices.contains(column),
+              let page = screenGroups().first(where: { $0.contains(column) }) else { return false }
+        let before = self
+        let ownColumn = !columns[from].isStack ? from : nil
+        // One window of every other column of the screen, to find those columns again after moving.
+        let others = page.filter { $0 != ownColumn }.compactMap { i in columns[i].windows.first { $0 != id } }
+
+        /// Gives the column holding `half` that half of the screen, the other columns the rest.
+        func split(_ half: WindowID, rest: [WindowID]) {
+            let restColumns = Set(rest.compactMap(index(of:))).sorted()
+            guard let i = index(of: half) else { return }
+            columns[i].width = restColumns.isEmpty ? 1 : 0.5
+            columns[i].centered = false
+            columns[i].pin = nil
+            let total = restColumns.map { columns[$0].footprint }.reduce(0, +)
+            for r in restColumns {
+                columns[r].width = columns[r].footprint * 0.5 / max(total, 0.01)
+                columns[r].centered = false
+                columns[r].pin = nil
+            }
+        }
+
+        switch (edge.horizontal, edge.vertical) {
+        case _ where others.isEmpty:
+            // Alone on its screen: it keeps the screen, against that side or in that corner.
+            guard let i = ownColumn else { return false }
+            if edge.horizontal != 0 { columns[i].width = 0.5 } else { columns[i].width = 1 }
+            columns[i].centered = false
+            // Pinned, so the next screen's columns never slide in beside it.
+            columns[i].pin = Column.Pin(x: edge.horizontal == 0 ? -1 : edge.horizontal, y: edge.vertical)
+        case (let h, 0):
+            do {
+                let anchor = h < 0 ? others[0] : others[others.count - 1]
+                guard let a = index(of: anchor) else { return false }
+                move(id, beside: a, after: h > 0)
+                columns[index(of: id)!].width = 0.5
+                split(id, rest: others)
+            }
+        case (0, let v):
+            var target = column
+            if target == ownColumn {
+                // Its own lone column: the nearest other column of the screen takes it.
+                guard let nearest = others.compactMap(index(of:)).min(by: { abs($0 - from) < abs($1 - from) }) else { return false }
+                target = nearest
+            }
+            let rows = columns[target].windows.filter { $0 != id }
+            guard let row = v < 0 ? rows.first : rows.last else { return false }
+            insert(id, nextTo: row, below: v > 0)
+            if let t = index(of: row) { columns[t].pin = nil }
+            fitScreen(others)
+        case (let h, let v):
+            guard let anchor = h < 0 ? others.first : others.last,
+                  let a = index(of: anchor) else { return false }
+            let rows = columns[a].windows.filter { $0 != id }
+            guard let row = v < 0 ? rows.first : rows.last else { return false }
+            insert(id, nextTo: row, below: v > 0)
+            if let t = index(of: row) { columns[t].pin = nil }
+            split(anchor, rest: others.filter { $0 != anchor })
+        }
+        focus(id)
+        return self != before
+    }
+
+    /// Makes the columns holding `ids` fill exactly one screen: equal shares when they are too
+    /// wide for it, stretched to fill it when they leave a gap.
+    private mutating func fitScreen(_ ids: [WindowID]) {
+        let indices = Set(ids.compactMap(index(of:))).sorted()
+        let total = indices.map { columns[$0].footprint }.reduce(0, +)
+        guard !indices.isEmpty, total > 1.01 || total < 0.99 else { return }
+        for i in indices {
+            let share = total > 1.01 ? 1 / CGFloat(indices.count) : columns[i].footprint / total
+            columns[i].width = share
+            columns[i].centered = false
+            columns[i].pin = nil
         }
     }
 
@@ -437,6 +616,7 @@ public struct Strip: Equatable, Sendable, Codable {
             // Alone on its screen: side by side, half each.
             columns[t].width = 0.5
             columns[t].centered = false
+            columns[t].pin = nil
             columns.insert(Column(windowID: id, width: 0.5), at: t + 1)
         } else if group.count == 2 {
             let other = t == group.lowerBound ? group.upperBound - 1 : group.lowerBound
@@ -603,6 +783,7 @@ public struct Strip: Equatable, Sendable, Codable {
 
     private mutating func toggleCentered(at i: Int) {
         columns[i].centered.toggle()
+        columns[i].pin = nil
         // Centering a full-width column would leave no margins: start from half the screen.
         if columns[i].centered && columns[i].width >= 0.999 && !columns[i].maximized { columns[i].width = 0.5 }
     }

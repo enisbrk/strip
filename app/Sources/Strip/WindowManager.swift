@@ -78,6 +78,10 @@ final class WindowManager: ObservableObject, WindowTrackerDelegate {
     private var draggedID: WindowID?
     private var lastActivationByStrip: CFTimeInterval = 0
     private let dragOverview = DragOverview()
+    /// Outline of where a window dragged against a screen edge lands, and that edge with the
+    /// column under the pointer (see `Strip.snap`).
+    private let snapPreview = SnapPreview()
+    private var snapTarget: (edge: SnapEdge, column: Int)?
     private let tabBars = TabBars()
     private let focusBorder = FocusBorder()
     private let dimOverlay = DimOverlay()
@@ -135,6 +139,7 @@ final class WindowManager: ObservableObject, WindowTrackerDelegate {
         mouseWatcher = nil
         draggedID = nil
         dragOverview.hide()
+        clearSnap()
         tracker?.stop()
         tracker = nil
         swipe.stop()
@@ -203,9 +208,7 @@ final class WindowManager: ObservableObject, WindowTrackerDelegate {
     private func swipeChanged(_ travel: CGFloat) {
         guard let d = swipeDisplay else { return }
         let engine = engine(d)
-        let maxOffset = settings.layout == .strip
-            ? max(0, engine.totalWidth(d.strip) - engine.area.width)
-            : CGFloat(max(engine.pageCount(d.strip, preset: settings.layout) - 1, 0)) * engine.pageStride
+        let maxOffset = max(0, engine.totalWidth(d.strip) - engine.area.width)
         let slack = engine.area.width * 0.15
         // Content moves with the fingers (natural scrolling).
         let offset = min(max(swipeStartOffset - travel * engine.area.width * 1.5, -slack), maxOffset + slack)
@@ -214,32 +217,22 @@ final class WindowManager: ObservableObject, WindowTrackerDelegate {
         }
     }
 
-    /// …then settles on the nearest column (or screen, with a grid preset).
+    /// …then settles on the nearest column.
     private func swipeEnded(velocity: CGFloat) {
         guard let d = swipeDisplay else { return }
         swipeDisplay = nil
         let engine = engine(d)
         let current = d.animator.presented
-        // A quick flick moves at least one column / screen in its direction.
+        // A quick flick moves at least one column in its direction.
         let fling = velocity < -1.2 ? 1 : velocity > 1.2 ? -1 : 0
-        let layout = settings.layout
-        if layout == .strip {
-            guard let settled = engine.settle(d.strip, offset: current, fling: fling) else { return }
-            d.strip.viewportOffset = settled.offset
-            // Keep focus if the focused column is still fully on screen; else focus where we landed.
-            if let f = d.strip.focusedIndex {
-                let x = engine.columnOrigins(d.strip)[f], w = engine.slotWidth(of: d.strip.columns[f])
-                if x < settled.offset - 1 || x + w > settled.offset + engine.area.width + 1 {
-                    d.strip.focus(index: settled.index)
-                }
+        guard let settled = engine.settle(d.strip, offset: current, fling: fling) else { return }
+        d.strip.viewportOffset = settled.offset
+        // Keep focus if the focused column is still fully on screen; else focus where we landed.
+        if let f = d.strip.focusedIndex {
+            let x = engine.columnOrigins(d.strip)[f], w = engine.slotWidth(of: d.strip.columns[f])
+            if x < settled.offset - 1 || x + w > settled.offset + engine.area.width + 1 {
+                d.strip.focus(index: settled.index)
             }
-        } else {
-            let pages = engine.pageCount(d.strip, preset: layout)
-            let page = min(max(Int((current / engine.pageStride).rounded()) + fling, 0), max(pages - 1, 0))
-            if let f = d.strip.focusedIndex, engine.page(of: f, preset: layout) != page {
-                d.strip.focus(index: page * layout.slots.count)
-            }
-            d.strip.viewportOffset = CGFloat(page) * engine.pageStride
         }
         if let id = d.strip.focusedWindowID { activate(managed[id]?.window) }
         // A swipe navigates like a shortcut does.
@@ -345,10 +338,7 @@ final class WindowManager: ObservableObject, WindowTrackerDelegate {
     /// Mouse follows focus: after a keyboard focus change, put the pointer in the focused window.
     private func warpMouseToFocus(_ d: Display) {
         guard settings.mouseFollowsFocus, let id = d.strip.focusedWindowID else { return }
-        let engine = engine(d)
-        let frames = settings.layout == .strip
-            ? engine.frames(for: d.strip, offset: d.strip.viewportOffset)
-            : engine.presetFrames(for: d.strip, preset: settings.layout, offset: d.strip.viewportOffset)
+        let frames = engine(d).frames(for: d.strip, offset: d.strip.viewportOffset)
         guard let frame = frames[id], !frame.contains(mouseLocationAX) else { return }
         CGWarpMouseCursorPosition(CGPoint(x: frame.midX, y: frame.midY))
         CGAssociateMouseAndMouseCursorPosition(1)
@@ -507,7 +497,7 @@ final class WindowManager: ObservableObject, WindowTrackerDelegate {
         // Tell what was just done, on the display it happened on.
         guard isEnabled, command != .toggleEnabled, command != .editStrip, settings.shortcutHUD || settings.minimap,
               let d = activeDisplay, let screen = screen(for: d) else { return }
-        minimap.show(displayID: d.id, screen: screen, strip: d.strip, preset: settings.layout, engine: engine(d),
+        minimap.show(displayID: d.id, screen: screen, strip: d.strip, engine: engine(d),
                      icons: appIcons(d), showMap: settings.minimap,
                      caption: settings.shortcutHUD ? MinimapCaption(keys: binding?.keyCaps ?? [], title: command.title) : nil)
     }
@@ -567,20 +557,11 @@ final class WindowManager: ObservableObject, WindowTrackerDelegate {
         }
     }
 
-    /// Pages to the next / previous screen on this display: the next group of windows in a grid
-    /// preset, or one screen width of columns in strip mode. Always slides.
+    /// Pages to the next / previous screen on this display: one screen width of columns. Always slides.
     private func switchScreen(_ d: Display, direction: Int) {
-        let engine = engine(d)
-        let layout = settings.layout
-        if layout == .strip {
-            guard let step = engine.screenStep(d.strip, direction: direction) else { return }
-            d.strip.focus(index: step.index)
-            d.strip.viewportOffset = step.offset
-        } else {
-            guard let index = engine.presetScreenStep(d.strip, preset: layout, direction: direction) else { return }
-            d.strip.focus(index: index)
-            d.strip.viewportOffset = engine.presetOffset(for: d.strip, preset: layout)
-        }
+        guard let step = engine(d).screenStep(d.strip, direction: direction) else { return }
+        d.strip.focus(index: step.index)
+        d.strip.viewportOffset = step.offset
         if let id = d.strip.focusedWindowID { activate(managed[id]?.window) }
         render(d, animated: true)
         warpMouseToFocus(d)
@@ -650,10 +631,7 @@ final class WindowManager: ObservableObject, WindowTrackerDelegate {
         guard isEnabled else { return }
         tiledCount = displays.reduce(0) { $0 + $1.strip.allWindows.count }
         scheduleSessionSave()
-        let engine = engine(d)
-        d.strip.viewportOffset = settings.layout == .strip
-            ? engine.targetOffset(for: d.strip)
-            : engine.presetOffset(for: d.strip, preset: settings.layout)
+        d.strip.viewportOffset = engine(d).targetOffset(for: d.strip)
         // The minimap appears for shortcuts (see perform) and when a window joins this strip.
         let windows = Set(d.strip.allWindows)
         let known = d.knownWindows[d.spaceID]
@@ -686,6 +664,7 @@ final class WindowManager: ObservableObject, WindowTrackerDelegate {
         }
         switch action {
         case .drop(let id, let target): d.strip.drop(id, on: target, share: false)
+        case .moveScreen(let id, let target, let after): d.strip.moveScreen(containing: id, beside: target, after: after)
         case .width(let id, let width): d.strip.setWidth(width, for: id)
         case .toggleTabs(let id): d.strip.toggleTabbed(containing: id)
         case .toggleCentered(let id): d.strip.toggleCentered(containing: id)
@@ -716,7 +695,7 @@ final class WindowManager: ObservableObject, WindowTrackerDelegate {
 
     private func showMinimap(_ d: Display) {
         guard settings.minimap, let screen = screen(for: d) else { return }
-        minimap.show(displayID: d.id, screen: screen, strip: d.strip, preset: settings.layout, engine: engine(d),
+        minimap.show(displayID: d.id, screen: screen, strip: d.strip, engine: engine(d),
                      icons: appIcons(d))
     }
 
@@ -745,11 +724,7 @@ final class WindowManager: ObservableObject, WindowTrackerDelegate {
     }
 
     private func apply(_ d: Display, offset: CGFloat) {
-        let layout = settings.layout
-        let engine = engine(d)
-        let frames = layout == .strip
-            ? engine.frames(for: d.strip, offset: offset)
-            : engine.presetFrames(for: d.strip, preset: layout, offset: offset)
+        let frames = engine(d).frames(for: d.strip, offset: offset)
         let screen = d.frame
         let others = otherScreenFrames(d)
         var changes: [(AXWindow, CGRect, sizeChanged: Bool)] = []
@@ -804,11 +779,7 @@ final class WindowManager: ObservableObject, WindowTrackerDelegate {
     /// Positions the tab bars of a display's tabbed columns. Titles are only re-read once the
     /// animation settles, so sliding stays cheap.
     private func updateTabBars(_ d: Display, offset: CGFloat) {
-        let layout = settings.layout
-        let engine = engine(d)
-        let rects = layout == .strip
-            ? engine.columnRects(for: d.strip, offset: offset)
-            : engine.presetColumnRects(for: d.strip, preset: layout, offset: offset)
+        let rects = engine(d).columnRects(for: d.strip, offset: offset)
         let others = otherScreenFrames(d)
         let readContent = !d.animator.isAnimating
         var bars: [TabBars.Bar] = []
@@ -1225,6 +1196,7 @@ final class WindowManager: ObservableObject, WindowTrackerDelegate {
         guard let id = draggedID else { return }
         if dragOverview.isVisible {
             dragOverview.updateHover(mouse: NSEvent.mouseLocation)
+            updateSnap(id)
             return
         }
         guard let d = display(of: id), let window = managed[id]?.window, let frame = window.frame,
@@ -1235,39 +1207,106 @@ final class WindowManager: ObservableObject, WindowTrackerDelegate {
 
         let maxSize = CGSize(width: screen.visibleFrame.width * 0.8, height: screen.visibleFrame.height * 0.8)
         let strip = d.strip, engine = engine(d)
-        let overview = Overview.make(strip: strip, preset: settings.layout, engine: engine, maxSize: maxSize)
-        // Strip mode previews the drop: the strip as it would be, windows moving aside live.
-        let preview: ((StripDrop?) -> Overview)? = settings.layout != .strip ? nil : { drop in
+        let overview = Overview.make(strip: strip, engine: engine, maxSize: maxSize)
+        // Previews the drop: the strip as it would be, windows moving aside live.
+        let preview: (StripDrop?) -> Overview = { drop in
             var s = strip
             if let drop { s.drop(id, on: drop, share: true) }
-            return Overview.make(strip: s, preset: .strip, engine: engine, maxSize: maxSize)
+            return Overview.make(strip: s, engine: engine, maxSize: maxSize)
         }
         dragOverview.show(overview: overview, tiles: overviewTiles(d), dragged: id, on: screen, preview: preview)
         dragOverview.updateHover(mouse: NSEvent.mouseLocation)
+        updateSnap(id)
+    }
+
+    /// The edge or corner of `screen` the pointer is held against while dragging: within a few
+    /// points of the sides or the Dock side, or up in the menu bar for the top; a corner when it
+    /// is also near the neighbouring side.
+    private func snapEdge(at mouse: CGPoint, on screen: NSScreen) -> SnapEdge? {
+        let v = screen.visibleFrame
+        guard screen.frame.insetBy(dx: -1, dy: -1).contains(mouse) else { return nil }
+        let edge: CGFloat = 24, corner: CGFloat = 140
+        let left = mouse.x - v.minX, right = v.maxX - mouse.x
+        let top = v.maxY - mouse.y, bottom = mouse.y - v.minY
+        // -1 / +1 when touching that side, 0 when not.
+        let h = left < edge ? -1 : right < edge ? 1 : 0
+        let vertical = top < 4 ? -1 : bottom < edge ? 1 : 0
+        // Near the neighbouring side counts for a corner.
+        let nearH = left < corner ? -1 : right < corner ? 1 : 0
+        let nearV = top < corner ? -1 : bottom < corner ? 1 : 0
+        switch (h != 0 ? h : vertical != 0 ? nearH : 0, vertical != 0 ? vertical : h != 0 ? nearV : 0) {
+        case (-1, -1): return .topLeft
+        case (1, -1): return .topRight
+        case (-1, 1): return .bottomLeft
+        case (1, 1): return .bottomRight
+        case (-1, 0): return .left
+        case (1, 0): return .right
+        case (0, -1): return .top
+        case (0, 1): return .bottom
+        default: return nil
+        }
+    }
+
+    /// Shows where the dragged window lands when it is held against a screen edge, the
+    /// overview fading back while it does.
+    private func updateSnap(_ id: WindowID) {
+        let mouse = NSEvent.mouseLocation
+        guard let d = display(of: id), let screen = screen(for: d), let edge = snapEdge(at: mouse, on: screen) else {
+            clearSnap()
+            return
+        }
+        let engine = engine(d)
+        // The column under the pointer, on the screen on display.
+        let x = min(max(mouse.x, engine.area.minX), engine.area.maxX - 1)
+        guard let column = engine.columnIndex(atScreenX: x, strip: d.strip, offset: d.strip.viewportOffset) else {
+            clearSnap()
+            return
+        }
+        var strip = d.strip
+        guard strip.snap(id, to: edge, onScreenOf: column) else {
+            clearSnap()
+            return
+        }
+        strip.viewportOffset = engine.targetOffset(for: strip)
+        guard let frame = engine.frames(for: strip, offset: strip.viewportOffset)[id] else {
+            clearSnap()
+            return
+        }
+        snapTarget = (edge, column)
+        snapPreview.show(appKitRect(fromAX: frame), on: screen)
+        dragOverview.setDimmed(true)
+    }
+
+    private func clearSnap() {
+        snapTarget = nil
+        snapPreview.hide()
+        dragOverview.setDimmed(false)
     }
 
     /// Mouse released: if it was over a miniature slot or column, move the window there.
     private func finishDrag() {
         defer { draggedID = nil }
+        if let id = draggedID, let snap = snapTarget, let d = display(of: id) {
+            // Held against a screen edge: it goes there.
+            clearSnap()
+            dragOverview.hide()
+            pendingUserChanges.remove(id)
+            d.strip.snap(id, to: snap.edge, onScreenOf: snap.column)
+            lastApplied.removeValue(forKey: id)
+            activate(managed[id]?.window)
+            relayout(d, animated: true)
+            return
+        }
+        clearSnap()
         guard let id = draggedID, dragOverview.isVisible else { return }
-        let target = dragOverview.hoveredTarget
-        let drop = dragOverview.stripDrop
-        guard let d = display(of: id), drop != nil || target != nil else {
+        guard let d = display(of: id), let drop = dragOverview.stripDrop else {
             dragOverview.hide()
             return
         }
         // The overview already shows the result: leave it a moment while the windows get there.
         dragOverview.hide(after: 0.35)
         pendingUserChanges.remove(id)
-        if settings.layout == .strip {
-            if let drop { d.strip.drop(id, on: drop, share: true) }
-        } else if let target {
-            if target.windowID != nil {
-                d.strip.swap(id, withIndex: target.index)
-            } else {
-                d.strip.move(id, to: d.strip.columns.count - 1)
-            }
-        }
+        d.strip.drop(id, on: drop, share: true)
         d.strip.focus(id)
         lastApplied.removeValue(forKey: id)
         activate(managed[id]?.window)
@@ -1275,7 +1314,6 @@ final class WindowManager: ObservableObject, WindowTrackerDelegate {
     }
 
     private func applyUserChanges() {
-        let layout = settings.layout
         var touched: [Display] = []
         for id in pendingUserChanges {
             guard let source = display(of: id), let window = managed[id]?.window,
@@ -1288,21 +1326,14 @@ final class WindowManager: ObservableObject, WindowTrackerDelegate {
             if let target = bestDisplay(for: frame), target !== source,
                !OffscreenPlacer.isParked(frame, display: target.frame) {
                 let e = engine(target)
-                let index = layout == .strip
-                    ? e.columnIndex(atScreenX: center.x, strip: target.strip, offset: target.strip.viewportOffset)
-                    : e.presetIndex(at: center, strip: target.strip, preset: layout)
+                let index = e.columnIndex(atScreenX: center.x, strip: target.strip, offset: target.strip.viewportOffset)
                 move(id, from: source, to: target, at: index)
                 activate(window)
                 continue
             }
 
             let engine = engine(source)
-            if layout != .strip {
-                // Grid preset: dropping a window on another slot swaps the two.
-                if let target = engine.presetIndex(at: center, strip: source.strip, preset: layout) {
-                    source.strip.swap(id, withIndex: target)
-                }
-            } else if abs(frame.width - expected.width) > 4 || abs(frame.height - expected.height) > 4 {
+            if abs(frame.width - expected.width) > 4 || abs(frame.height - expected.height) > 4 {
                 // Resized by hand: keep the new width, and the new height inside a stack.
                 if abs(frame.width - expected.width) > 4 {
                     source.strip.setWidth((frame.width + engine.innerGap) / (engine.area.width + engine.innerGap), for: id)

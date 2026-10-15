@@ -49,7 +49,6 @@ public struct Settings: Codable, Equatable, Sendable {
     public var widthStep: CGFloat = 0.1
     public var centerMode: CenterMode = .never
     public var animate: Bool = true
-    public var layout: LayoutPreset = .strip
     public var focusBorder: Bool = false
     public var dimInactive: Bool = false
     public var dimAmount: CGFloat = 0.25
@@ -81,7 +80,7 @@ public struct Settings: Codable, Equatable, Sendable {
     public init() {}
 
     private enum CodingKeys: String, CodingKey {
-        case outerGap, innerGap, presetWidths, defaultWidth, widthStep, centerMode, animate, layout
+        case outerGap, innerGap, presetWidths, defaultWidth, widthStep, centerMode, animate
         case focusBorder, dimInactive, dimAmount, minimap, shortcutHUD, trackpadFingers
         case appRules, disabledDisplays, focusFollowsMouse, mouseFollowsFocus, language
         /// Read only, to migrate settings saved before app rules.
@@ -97,7 +96,6 @@ public struct Settings: Codable, Equatable, Sendable {
         try c.encode(widthStep, forKey: .widthStep)
         try c.encode(centerMode, forKey: .centerMode)
         try c.encode(animate, forKey: .animate)
-        try c.encode(layout, forKey: .layout)
         try c.encode(focusBorder, forKey: .focusBorder)
         try c.encode(dimInactive, forKey: .dimInactive)
         try c.encode(dimAmount, forKey: .dimAmount)
@@ -122,7 +120,6 @@ public struct Settings: Codable, Equatable, Sendable {
         widthStep = try c.decodeIfPresent(CGFloat.self, forKey: .widthStep) ?? d.widthStep
         centerMode = try c.decodeIfPresent(CenterMode.self, forKey: .centerMode) ?? d.centerMode
         animate = try c.decodeIfPresent(Bool.self, forKey: .animate) ?? d.animate
-        layout = (try? c.decodeIfPresent(LayoutPreset.self, forKey: .layout)) ?? d.layout
         focusBorder = try c.decodeIfPresent(Bool.self, forKey: .focusBorder) ?? d.focusBorder
         dimInactive = try c.decodeIfPresent(Bool.self, forKey: .dimInactive) ?? d.dimInactive
         dimAmount = try c.decodeIfPresent(CGFloat.self, forKey: .dimAmount) ?? d.dimAmount

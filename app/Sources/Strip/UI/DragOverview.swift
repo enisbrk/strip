@@ -26,17 +26,16 @@ final class DragOverview {
     private static let spring = Animation.spring(response: 0.3, dampingFraction: 0.86)
     private let model = DragOverviewModel()
     private var panel: NSPanel?
-    /// Strip mode: the overview of the strip after a drop (nil: as it is now).
+    /// The overview of the strip after a drop (nil: as it is now).
     private var preview: ((StripDrop?) -> Overview)?
     private var hideWork: DispatchWorkItem?
 
     var isVisible: Bool { panel?.isVisible ?? false }
-    var hoveredTarget: OverviewTarget? { model.hovered }
     var stripDrop: StripDrop? { model.stripDrop }
 
-    /// - Parameter preview: strip mode only; the windows then move aside live to show the drop.
+    /// - Parameter preview: the strip after a drop; the windows move aside live to show it.
     func show(overview: Overview, tiles: [WindowID: OverviewTile], dragged: WindowID, on screen: NSScreen,
-              preview: ((StripDrop?) -> Overview)? = nil) {
+              preview: @escaping (StripDrop?) -> Overview) {
         hideWork?.cancel()
         self.preview = preview
         model.overview = overview
@@ -61,13 +60,8 @@ final class DragOverview {
 
     /// Updates the highlighted target for a mouse location in AppKit screen coordinates.
     func updateHover(mouse: CGPoint) {
-        guard let panel, panel.isVisible else { return }
+        guard let panel, panel.isVisible, let preview else { return }
         let local = CGPoint(x: mouse.x - panel.frame.minX, y: panel.frame.maxY - mouse.y)
-        guard let preview else {
-            let target = model.overview.target(at: local)
-            if target != model.hovered { model.hovered = target }
-            return
-        }
         let drop = stripDrop(at: local)
         guard drop != model.stripDrop else { return }
         let next = preview(drop)
@@ -96,6 +90,17 @@ final class DragOverview {
             return StripDrop(windowID: id, edge: p.x < t.rect.minX + band ? -1 : p.x > t.rect.maxX - band ? 1 : nil)
         }
         return model.stripDrop
+    }
+
+    /// Fades the overview back while a screen edge (not the overview) is the drop target.
+    func setDimmed(_ dimmed: Bool) {
+        guard let panel, panel.isVisible else { return }
+        let alpha: CGFloat = dimmed ? 0.25 : 1
+        guard panel.alphaValue != alpha else { return }
+        NSAnimationContext.runAnimationGroup { ctx in
+            ctx.duration = 0.15
+            panel.animator().alphaValue = alpha
+        }
     }
 
     /// - Parameter after: keeps the final arrangement on screen a moment before fading out.
@@ -154,17 +159,6 @@ struct OverviewView: View {
             RoundedRectangle(cornerRadius: 16)
                 .fill(Color(white: 0.13).opacity(0.97))
                 .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(.white.opacity(0.15)))
-
-            ForEach(Array(o.pages.enumerated()), id: \.offset) { i, page in
-                Text(L("Screen %d", i + 1))
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                    .position(x: page.midX, y: page.minY - Overview.labelHeight / 2)
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(Color.black.opacity(0.25))
-                    .frame(width: page.width, height: page.height)
-                    .position(x: page.midX, y: page.midY)
-            }
 
             if let viewport = o.viewport {
                 Text(L("Strip — the frame is what's on screen now"))

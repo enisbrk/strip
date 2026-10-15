@@ -65,9 +65,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Diagnostics.run()
             exit(0)
         }
-        if let i = CommandLine.arguments.firstIndex(of: "--render-overview"), i + 2 < CommandLine.arguments.count {
-            let layout = LayoutPreset(rawValue: CommandLine.arguments[i + 2]) ?? .grid2x2
-            Diagnostics.renderOverview(to: CommandLine.arguments[i + 1], layout: layout, settings: settings.settings)
+        if let i = CommandLine.arguments.firstIndex(of: "--render-overview"), i + 1 < CommandLine.arguments.count {
+            Diagnostics.renderOverview(to: CommandLine.arguments[i + 1], settings: settings.settings)
             exit(0)
         }
         if let i = CommandLine.arguments.firstIndex(of: "--fullscreen"), i + 2 < CommandLine.arguments.count,
@@ -80,7 +79,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Localization.use(CommandLine.arguments[i + 1])
             let lines = [Command.screenRight.title, Command.focusIndex(2).title, L("Windows managed: %d", 7),
                          L("%@ now runs this instead of “%@”.", "⌃⌥H", Command.focusLeft.title),
-                         L(LayoutPreset.grid2x2.title), L("System (%@)", AppLanguage.system.nativeName)]
+                         L("System (%@)", AppLanguage.system.nativeName)]
             try? lines.joined(separator: "\n").write(to: Diagnostics.reportURL, atomically: true, encoding: .utf8)
             exit(0)
         }
@@ -218,8 +217,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if manager.isEnabled { manager.perform(.toggleEnabled) }
         case .restart:
             manager.restart()
-        case .layout(let preset):
-            settings.settings.layout = preset
         case .run(let command):
             guard manager.isEnabled || command == .toggleEnabled else {
                 pendingURL = permission.isTrusted ? nil : url

@@ -8,7 +8,7 @@ public struct OverviewRow: Equatable, Sendable {
     public let isActive: Bool
 }
 
-/// A drop target in the drag overview: a slot (grid presets) or a column (strip).
+/// A column of the strip in the drag overview and the minimap.
 public struct OverviewTarget: Equatable, Sendable {
     /// Strip index the dragged window should end up at.
     public let index: Int
@@ -73,76 +73,33 @@ public struct OverviewTarget: Equatable, Sendable {
 /// Pure layout so the drawing and the hit testing always agree.
 public struct Overview: Equatable, Sendable {
     public var size: CGSize
-    /// Each miniature screen with its label ("Ekran 1"…); empty in strip mode.
-    public var pages: [CGRect]
-    /// Strip mode: the part of the strip currently on screen.
+    /// The part of the strip currently on screen.
     public var viewport: CGRect?
     public var targets: [OverviewTarget]
 
-    public static let empty = Overview(size: .zero, pages: [], viewport: nil, targets: [])
+    public static let empty = Overview(size: .zero, viewport: nil, targets: [])
 
     public static let padding: CGFloat = 20
     public static let spacing: CGFloat = 16
     public static let labelHeight: CGFloat = 20
     static let maxPageWidth: CGFloat = 300
-    static let minPageWidth: CGFloat = 140
 
     public func target(at point: CGPoint) -> OverviewTarget? {
         targets.first { $0.rect.contains(point) }
     }
 
     /// - Parameter compact: no outer padding and no page labels (for the minimap).
-    public static func make(strip: Strip, preset: LayoutPreset, engine: LayoutEngine, maxSize: CGSize,
+    public static func make(strip: Strip, engine: LayoutEngine, maxSize: CGSize,
                             compact: Bool = false) -> Overview {
-        let padding = compact ? 3 : Self.padding
-        let labelHeight = compact ? 0 : Self.labelHeight
-        return preset == .strip
-            ? stripOverview(strip: strip, engine: engine, maxSize: maxSize, padding: padding, labelHeight: labelHeight)
-            : presetOverview(strip: strip, preset: preset, engine: engine, maxSize: maxSize,
-                             padding: padding, labelHeight: labelHeight)
+        stripOverview(strip: strip, engine: engine, maxSize: maxSize,
+                      padding: compact ? 3 : Self.padding, labelHeight: compact ? 0 : Self.labelHeight)
     }
 
     public func scaled(by s: CGFloat) -> Overview {
         func scale(_ r: CGRect) -> CGRect { CGRect(x: r.minX * s, y: r.minY * s, width: r.width * s, height: r.height * s) }
-        return Overview(size: CGSize(width: size.width * s, height: size.height * s), pages: pages.map(scale),
+        return Overview(size: CGSize(width: size.width * s, height: size.height * s),
                         viewport: viewport.map(scale),
                         targets: targets.map { $0.scaled(by: s) })
-    }
-
-    private static func presetOverview(strip: Strip, preset: LayoutPreset, engine: LayoutEngine,
-                                       maxSize: CGSize, padding: CGFloat, labelHeight: CGFloat) -> Overview {
-        let n = preset.slots.count
-        let count = strip.columns.count
-        let pageCount = max(1, (count + n - 1) / n)
-        let aspect = engine.area.width / max(engine.area.height, 1)
-        let available = maxSize.width - 2 * padding
-
-        let perRow = max(1, min(pageCount, Int((available + spacing) / (minPageWidth + spacing))))
-        let pageWidth = min(maxPageWidth, (available - spacing * CGFloat(perRow - 1)) / CGFloat(perRow)).rounded()
-        let pageHeight = (pageWidth / aspect).rounded()
-        let rows = (pageCount + perRow - 1) / perRow
-
-        var pages: [CGRect] = []
-        var targets: [OverviewTarget] = []
-        for page in 0..<pageCount {
-            let row = page / perRow, col = page % perRow
-            let x = padding + CGFloat(col) * (pageWidth + spacing)
-            let y = padding + CGFloat(row) * (labelHeight + pageHeight + spacing) + labelHeight
-            let pageRect = CGRect(x: x, y: y, width: pageWidth, height: pageHeight)
-            pages.append(pageRect)
-            let inner = pageRect.insetBy(dx: 4, dy: 4)
-            for (s, u) in preset.slots.enumerated() {
-                let index = page * n + s
-                let rect = CGRect(x: inner.minX + u.minX * inner.width, y: inner.minY + u.minY * inner.height,
-                                  width: u.width * inner.width, height: u.height * inner.height)
-                    .insetBy(dx: 1.5, dy: 1.5)
-                targets.append(OverviewTarget(index: index, rect: rect,
-                                              column: index < count ? strip.columns[index] : nil))
-            }
-        }
-        let width = 2 * padding + CGFloat(perRow) * pageWidth + CGFloat(perRow - 1) * spacing
-        let height = 2 * padding + CGFloat(rows) * (labelHeight + pageHeight) + CGFloat(rows - 1) * spacing
-        return Overview(size: CGSize(width: width, height: height), pages: pages, viewport: nil, targets: targets)
     }
 
     private static func stripOverview(strip: Strip, engine: LayoutEngine, maxSize: CGSize,
@@ -165,6 +122,6 @@ public struct Overview: Equatable, Sendable {
         let viewport = CGRect(x: padding + strip.viewportOffset * scale, y: top,
                               width: area.width * scale, height: height).insetBy(dx: -3, dy: -3)
         return Overview(size: CGSize(width: 2 * padding + total * scale, height: top + height + padding),
-                        pages: [], viewport: viewport, targets: targets)
+                        viewport: viewport, targets: targets)
     }
 }

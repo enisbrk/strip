@@ -11,10 +11,6 @@ for f in (root / "Sources/Strip").rglob("*.swift"):
     if "Localization" in f.parts:
         continue
     keys.update(re.findall(r'\bL\(' + string, f.read_text()))
-# Layout names come from the core module and are translated with L(preset.title).
-core = (root / "Sources/StripCore/LayoutPreset.swift").read_text()
-title_block = core[core.index("public var title"):]
-keys.update(re.findall(r'case \.\w+: ' + string, title_block))
 
 if "--keys" in sys.argv:
     print("\n".join(sorted(keys)))

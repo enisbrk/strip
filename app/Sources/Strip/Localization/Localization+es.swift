@@ -84,8 +84,8 @@ extension Localization {
             "Motor",
         "Edit strip":
             "Editar tira",
-        "Drag to reorder · drop above or below a window to stack · click to focus · Esc to close":
-            "Arrastra para reordenar · suelta encima o debajo de una ventana para apilar · haz clic para enfocar · Esc para cerrar",
+        "← → to choose · Return to focus · drag windows to reorder or stack · drag a screen by its name or edge to move it · Esc to close":
+            "← → para elegir · Retorno para enfocar · arrastra ventanas para reordenar o apilar · arrastra una pantalla por su nombre o borde para moverla · Esc para cerrar",
         "Width":
             "Ancho",
         "Center on its own screen":
@@ -122,10 +122,6 @@ extension Localization {
             "Enfocar la ventana de la izquierda",
         "Focus window on the right":
             "Enfocar la ventana de la derecha",
-        "Four (2 top, 2 bottom)":
-            "Cuatro (2 arriba, 2 abajo)",
-        "Full screen":
-            "Pantalla completa",
         "Full width":
             "Ancho completo",
         "Gap at screen edges":
@@ -274,8 +270,6 @@ extension Localization {
             "Detener Strip",
         "Stopped":
             "Detenido",
-        "Strip (scrolling)":
-            "Tira (desplazable)",
         "Strip can move windows.":
             "Strip puede mover ventanas.",
         "Strip leaves windows on a display you turn off alone. Drag a window from there to a managed display and it joins the strip. Each display has its own strip; ⌃⌥N sends the focused window to the next display.":
@@ -296,14 +290,6 @@ extension Localization {
             "Todos empiezan por Control + Opción. Cámbialos en Ajustes → Atajos.",
         "This is the only permission Strip needs to move and resize other apps' windows. Strip doesn't record or send anything.":
             "Es el único permiso que Strip necesita para mover y redimensionar las ventanas de otras apps. Strip no graba ni envía nada.",
-        "Three (1 left, 2 right)":
-            "Tres (1 a la izquierda, 2 a la derecha)",
-        "Three (1 top, 2 bottom)":
-            "Tres (1 arriba, 2 abajo)",
-        "Three (2 left, 1 right)":
-            "Tres (2 a la izquierda, 1 a la derecha)",
-        "Three (2 top, 1 bottom)":
-            "Tres (2 arriba, 1 abajo)",
         "Tile":
             "En la tira",
         "Tile windows by dragging them to screen edges":
@@ -318,8 +304,6 @@ extension Localization {
             "Deslizar en el trackpad está desactivado; puedes activarlo en Ajustes.",
         "Turn Strip on in System Settings → Privacy & Security → Accessibility; this page updates by itself once it's allowed.":
             "Activa Strip en Ajustes del Sistema → Privacidad y seguridad → Accesibilidad; esta página se actualizará sola cuando tenga permiso.",
-        "Two side by side":
-            "Dos en paralelo",
         "Type the keys… (Esc to cancel)":
             "Pulsa las teclas… (Esc para cancelar)",
         "URL scheme: %@":

@@ -84,8 +84,8 @@ extension Localization {
             "Motore",
         "Edit strip":
             "Modifica striscia",
-        "Drag to reorder · drop above or below a window to stack · click to focus · Esc to close":
-            "Trascina per riordinare · rilascia sopra o sotto una finestra per impilare · fai clic per attivare · Esc per chiudere",
+        "← → to choose · Return to focus · drag windows to reorder or stack · drag a screen by its name or edge to move it · Esc to close":
+            "← → per scegliere · Invio per attivare · trascina le finestre per riordinarle o impilarle · trascina uno schermo dal nome o dal bordo per spostarlo · Esc per chiudere",
         "Width":
             "Larghezza",
         "Center on its own screen":
@@ -122,10 +122,6 @@ extension Localization {
             "Attiva la finestra a sinistra",
         "Focus window on the right":
             "Attiva la finestra a destra",
-        "Four (2 top, 2 bottom)":
-            "Quattro (2 sopra, 2 sotto)",
-        "Full screen":
-            "Schermo intero",
         "Full width":
             "Larghezza piena",
         "Gap at screen edges":
@@ -274,8 +270,6 @@ extension Localization {
             "Interrompi Strip",
         "Stopped":
             "Interrotto",
-        "Strip (scrolling)":
-            "Striscia (a scorrimento)",
         "Strip can move windows.":
             "Strip può spostare le finestre.",
         "Strip leaves windows on a display you turn off alone. Drag a window from there to a managed display and it joins the strip. Each display has its own strip; ⌃⌥N sends the focused window to the next display.":
@@ -296,14 +290,6 @@ extension Localization {
             "Iniziano tutte con Control + Opzione. Modificale in Impostazioni → Abbreviazioni.",
         "This is the only permission Strip needs to move and resize other apps' windows. Strip doesn't record or send anything.":
             "È l'unico permesso di cui Strip ha bisogno per spostare e ridimensionare le finestre delle altre app. Strip non registra né invia nulla.",
-        "Three (1 left, 2 right)":
-            "Tre (1 a sinistra, 2 a destra)",
-        "Three (1 top, 2 bottom)":
-            "Tre (1 sopra, 2 sotto)",
-        "Three (2 left, 1 right)":
-            "Tre (2 a sinistra, 1 a destra)",
-        "Three (2 top, 1 bottom)":
-            "Tre (2 sopra, 1 sotto)",
         "Tile":
             "Nella striscia",
         "Tile windows by dragging them to screen edges":
@@ -318,8 +304,6 @@ extension Localization {
             "Lo scorrimento sul trackpad è disattivato; puoi attivarlo nelle Impostazioni.",
         "Turn Strip on in System Settings → Privacy & Security → Accessibility; this page updates by itself once it's allowed.":
             "Attiva Strip in Impostazioni di Sistema → Privacy e sicurezza → Accessibilità; questa pagina si aggiorna da sola quando il permesso è concesso.",
-        "Two side by side":
-            "Due affiancate",
         "Type the keys… (Esc to cancel)":
             "Premi i tasti… (Esc per annullare)",
         "URL scheme: %@":

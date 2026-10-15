@@ -35,12 +35,6 @@ private struct GeneralSettings: View {
                 }
             }
             Section(L("Layout")) {
-                Picker(L("Layout"), selection: $store.settings.layout) {
-                    ForEach(LayoutPreset.allCases, id: \.self) { preset in
-                        Label { Text(L(preset.title)) } icon: { Image(nsImage: LayoutIcon.image(for: preset)) }
-                            .tag(preset)
-                    }
-                }
                 LabeledSlider(title: L("Gap between windows"), value: $store.settings.innerGap, range: 0...40)
                 LabeledSlider(title: L("Gap at screen edges"), value: $store.settings.outerGap, range: 0...40)
                 Picker(L("New window width"), selection: $store.settings.defaultWidth) {

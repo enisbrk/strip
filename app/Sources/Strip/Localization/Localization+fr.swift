@@ -84,8 +84,8 @@ extension Localization {
             "Moteur",
         "Edit strip":
             "Modifier la bande",
-        "Drag to reorder · drop above or below a window to stack · click to focus · Esc to close":
-            "Glissez pour réordonner · déposez au-dessus ou en dessous d’une fenêtre pour empiler · cliquez pour activer · Échap pour fermer",
+        "← → to choose · Return to focus · drag windows to reorder or stack · drag a screen by its name or edge to move it · Esc to close":
+            "← → pour choisir · Retour pour activer · faites glisser les fenêtres pour réordonner ou empiler · faites glisser un écran par son nom ou son bord pour le déplacer · Échap pour fermer",
         "Width":
             "Largeur",
         "Center on its own screen":
@@ -122,10 +122,6 @@ extension Localization {
             "Activer la fenêtre de gauche",
         "Focus window on the right":
             "Activer la fenêtre de droite",
-        "Four (2 top, 2 bottom)":
-            "Quatre (2 en haut, 2 en bas)",
-        "Full screen":
-            "Plein écran",
         "Full width":
             "Pleine largeur",
         "Gap at screen edges":
@@ -274,8 +270,6 @@ extension Localization {
             "Arrêter Strip",
         "Stopped":
             "Arrêté",
-        "Strip (scrolling)":
-            "Bande (défilante)",
         "Strip can move windows.":
             "Strip peut déplacer les fenêtres.",
         "Strip leaves windows on a display you turn off alone. Drag a window from there to a managed display and it joins the strip. Each display has its own strip; ⌃⌥N sends the focused window to the next display.":
@@ -296,14 +290,6 @@ extension Localization {
             "Ils commencent tous par Contrôle + Option. Modifiez-les dans Réglages → Raccourcis.",
         "This is the only permission Strip needs to move and resize other apps' windows. Strip doesn't record or send anything.":
             "C’est la seule autorisation dont Strip a besoin pour déplacer et redimensionner les fenêtres des autres apps. Strip n’enregistre ni n’envoie rien.",
-        "Three (1 left, 2 right)":
-            "Trois (1 à gauche, 2 à droite)",
-        "Three (1 top, 2 bottom)":
-            "Trois (1 en haut, 2 en bas)",
-        "Three (2 left, 1 right)":
-            "Trois (2 à gauche, 1 à droite)",
-        "Three (2 top, 1 bottom)":
-            "Trois (2 en haut, 1 en bas)",
         "Tile":
             "Dans la bande",
         "Tile windows by dragging them to screen edges":
@@ -318,8 +304,6 @@ extension Localization {
             "Le balayage au trackpad est désactivé ; vous pouvez l’activer dans les Réglages.",
         "Turn Strip on in System Settings → Privacy & Security → Accessibility; this page updates by itself once it's allowed.":
             "Activez Strip dans Réglages Système → Confidentialité et sécurité → Accessibilité ; cette page se met à jour toute seule une fois l’accès autorisé.",
-        "Two side by side":
-            "Deux côte à côte",
         "Type the keys… (Esc to cancel)":
             "Tapez les touches… (Échap pour annuler)",
         "URL scheme: %@":

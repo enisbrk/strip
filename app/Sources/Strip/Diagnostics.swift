@@ -39,7 +39,7 @@ enum Diagnostics {
     }
 
     /// `--render-overview <png>`: draws the drag overview for the current windows, for checking its look.
-    static func renderOverview(to path: String, layout: LayoutPreset, settings: StripCore.Settings) {
+    static func renderOverview(to path: String, settings: StripCore.Settings) {
         var strip = Strip()
         var tiles: [WindowID: OverviewTile] = [:]
         for app in NSWorkspace.shared.runningApplications where app.activationPolicy == .regular && !app.isHidden {
@@ -64,10 +64,10 @@ enum Diagnostics {
         guard let screen = NSScreen.screens.first else { return }
         let visible = AX.axRect(fromAppKit: screen.visibleFrame)
         let engine = LayoutEngine(screen: visible, settings: settings)
-        strip.viewportOffset = layout == .strip ? engine.targetOffset(for: strip) : 0
+        strip.viewportOffset = engine.targetOffset(for: strip)
         let maxSize = CGSize(width: visible.width * 0.8, height: visible.height * 0.8)
         let model = DragOverviewModel()
-        model.overview = Overview.make(strip: strip, preset: layout, engine: engine, maxSize: maxSize)
+        model.overview = Overview.make(strip: strip, engine: engine, maxSize: maxSize)
         model.tiles = tiles
         model.draggedID = strip.columns.first?.windowID
         model.hovered = model.overview.targets.dropFirst(3).first
@@ -76,7 +76,7 @@ enum Diagnostics {
         write(renderer.nsImage, to: path)
 
         // The minimap of the same strip, next to it.
-        var mini = Overview.make(strip: strip, preset: layout, engine: engine,
+        var mini = Overview.make(strip: strip, engine: engine,
                                  maxSize: CGSize(width: 100_000, height: 100_000), compact: true)
         mini = mini.scaled(by: min(240 / mini.size.width, 44 / mini.size.height, 1))
         GlassStyle.forceMaterial = true
@@ -84,7 +84,7 @@ enum Diagnostics {
         miniModel.overview = mini
         miniModel.icons = tiles.compactMapValues(\.icon)
         miniModel.focusedIndex = strip.focusedIndex
-        miniModel.highlight = layout == .strip ? mini.viewport : mini.pages.first
+        miniModel.highlight = mini.viewport
         miniModel.caption = MinimapCaption(keys: ["⌃", "⌥", "→"], title: Command.screenRight.title)
         let miniRenderer = ImageRenderer(content: MinimapView(model: miniModel).padding(10).background(Color(white: 0.85)))
         miniRenderer.scale = 3

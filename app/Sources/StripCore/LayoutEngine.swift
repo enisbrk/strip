@@ -32,31 +32,64 @@ public struct LayoutEngine: Sendable {
 
     /// Room the column takes in the strip: its width, or a whole screen when centered.
     public func slotWidth(of column: Column) -> CGFloat {
-        column.centered ? area.width : pixelWidth(of: column)
+        column.centered || column.pin != nil ? area.width : pixelWidth(of: column)
     }
 
-    /// Left edge of every column's slot in strip coordinates (first column starts at 0).
-    public func columnOrigins(_ strip: Strip) -> [CGFloat] {
+    /// One screen of the strip (see `Strip.screenGroups`): its columns, where it starts in strip
+    /// coordinates and how wide it is. Every screen takes at least a whole screen width, so a
+    /// screen its columns don't fill shows empty space, never the next screen's windows.
+    public struct Page: Equatable, Sendable {
+        public let columns: Range<Int>
+        public let start: CGFloat
+        public let width: CGFloat
+    }
+
+    public func pages(_ strip: Strip) -> [Page] {
         var x: CGFloat = 0
-        return strip.columns.map { col in
-            defer { x += slotWidth(of: col) + innerGap }
-            return x
+        return strip.screenGroups().map { group in
+            let content = group.map { slotWidth(of: strip.columns[$0]) }.reduce(0, +) + innerGap * CGFloat(group.count - 1)
+            let page = Page(columns: group, start: x, width: max(area.width, content))
+            x += page.width + innerGap
+            return page
         }
+    }
+
+    /// Left edge of every column's slot in strip coordinates (first column starts at 0). Each
+    /// screen starts a whole screen width after the previous one.
+    public func columnOrigins(_ strip: Strip) -> [CGFloat] {
+        var origins = Array(repeating: CGFloat(0), count: strip.columns.count)
+        for page in pages(strip) {
+            var x = page.start
+            for i in page.columns {
+                origins[i] = x
+                x += slotWidth(of: strip.columns[i]) + innerGap
+            }
+        }
+        return origins
+    }
+
+    /// The screen holding column `index`.
+    func page(of index: Int, in pages: [Page]) -> Page? {
+        pages.first { $0.columns.contains(index) }
     }
 
     /// Where the windows of a column start inside its slot (the left margin of a centered column).
     public func inset(of column: Column) -> CGFloat {
-        column.centered ? ((area.width - pixelWidth(of: column)) / 2).rounded() : 0
+        if column.centered { return ((area.width - pixelWidth(of: column)) / 2).rounded() }
+        return column.pin?.x == 1 ? area.width - pixelWidth(of: column) : 0
     }
 
     public func totalWidth(_ strip: Strip) -> CGFloat {
-        guard let last = strip.columns.last else { return 0 }
-        return columnOrigins(strip).last! + slotWidth(of: last)
+        guard let last = pages(strip).last else { return 0 }
+        return last.start + last.width
     }
 
-    /// The viewport offset that should be used after focus or widths changed.
+    /// The viewport offset that should be used after focus or widths changed: the start of the
+    /// focused column's screen. Only a screen wider than the display (one very wide column)
+    /// scrolls within itself, as `centerMode` says.
     public func targetOffset(for strip: Strip) -> CGFloat {
         guard let f = strip.focusedIndex else { return 0 }
+        if let page = page(of: f, in: pages(strip)), page.width <= area.width + 0.5 { return page.start }
         let origins = columnOrigins(strip)
         let x = origins[f]
         let w = slotWidth(of: strip.columns[f])
@@ -78,8 +111,10 @@ public struct LayoutEngine: Sendable {
     }
 
     /// Offset that centers the focused column, regardless of `centerMode`.
+    /// A screen that fits the display stays at its start, so no other screen shows.
     public func centeredOffset(for strip: Strip) -> CGFloat {
         guard let f = strip.focusedIndex else { return strip.viewportOffset }
+        if let page = page(of: f, in: pages(strip)), page.width <= area.width + 0.5 { return page.start }
         let x = columnOrigins(strip)[f]
         return x + slotWidth(of: strip.columns[f]) / 2 - area.width / 2
     }
@@ -97,8 +132,11 @@ public struct LayoutEngine: Sendable {
     /// The rect of every column (its whole stack) at a viewport offset.
     public func columnRects(for strip: Strip, offset: CGFloat) -> [CGRect] {
         zip(strip.columns, columnOrigins(strip)).map { col, x in
-            CGRect(x: (area.minX + x + inset(of: col) - offset).rounded(), y: area.minY,
-                   width: pixelWidth(of: col), height: area.height)
+            // A column pinned to the top or bottom half of its screen.
+            let half = ((area.height - innerGap) / 2).rounded()
+            let y = col.pin?.y == 1 ? area.maxY - half : area.minY
+            return CGRect(x: (area.minX + x + inset(of: col) - offset).rounded(), y: y,
+                          width: pixelWidth(of: col), height: (col.pin?.y ?? 0) != 0 ? half : area.height)
         }
     }
 
@@ -139,39 +177,30 @@ public struct LayoutEngine: Sendable {
         strip.columns.filter(\.showsOnlyActive).flatMap { c in c.windows.filter { $0 != c.windowID } }
     }
 
-    /// Where a free scroll (trackpad swipe) settles: the column whose left edge is nearest to
-    /// `offset`, nudged one column in the direction of a fast fling. Returns that column and the
-    /// offset showing it.
+    /// Where a free scroll (trackpad swipe) settles: the screen whose start is nearest to
+    /// `offset`, nudged one screen in the direction of a fast fling. Returns that screen's first
+    /// column and the offset showing it.
     public func settle(_ strip: Strip, offset: CGFloat, fling: Int = 0) -> (index: Int, offset: CGFloat)? {
-        guard !strip.columns.isEmpty else { return nil }
-        let origins = columnOrigins(strip)
+        let pages = pages(strip)
+        guard !pages.isEmpty else { return nil }
         let maxOffset = max(0, totalWidth(strip) - area.width)
-        var nearest = origins.indices.min { abs(origins[$0] - offset) < abs(origins[$1] - offset) }!
-        nearest = min(max(nearest + fling, 0), origins.count - 1)
-        return (nearest, min(max(origins[nearest], 0), maxOffset))
+        var nearest = pages.indices.min { abs(pages[$0].start - offset) < abs(pages[$1].start - offset) }!
+        nearest = min(max(nearest + fling, 0), pages.count - 1)
+        return (pages[nearest].columns.lowerBound, min(max(pages[nearest].start, 0), maxOffset))
     }
 
-    /// "Next / previous screen" in strip mode: the column to focus and the viewport offset that
-    /// puts it at the left edge. Moves by roughly one screen width; nil when already at the end.
+    /// "Next / previous screen" in strip mode: the first column of that screen and the viewport
+    /// offset showing it; nil when already at the end.
     public func screenStep(_ strip: Strip, direction: Int) -> (index: Int, offset: CGFloat)? {
-        guard !strip.columns.isEmpty else { return nil }
-        let origins = columnOrigins(strip)
+        let pages = pages(strip)
+        guard !pages.isEmpty else { return nil }
         let offset = strip.viewportOffset
         let maxOffset = max(0, totalWidth(strip) - area.width)
-        let firstVisible = origins.firstIndex { $0 >= offset - 1 } ?? origins.count - 1
-        let target: Int
-        if direction > 0 {
-            // First column that is not fully visible on the right.
-            guard let i = strip.columns.indices.first(where: {
-                origins[$0] + slotWidth(of: strip.columns[$0]) > offset + area.width + 1
-            }) else { return nil }
-            target = i
-        } else {
-            guard offset > 1 else { return nil }
-            let candidate = origins.firstIndex { $0 >= offset - area.width - innerGap - 1 } ?? 0
-            target = min(candidate, max(firstVisible - 1, 0))
-        }
-        return (target, min(max(origins[target], 0), maxOffset))
+        // The screen on display: the last one starting at or before the viewport.
+        let current = pages.lastIndex { $0.start <= offset + 1 } ?? 0
+        let target = current + (direction > 0 ? 1 : -1)
+        guard pages.indices.contains(target) else { return nil }
+        return (pages[target].columns.lowerBound, min(max(pages[target].start, 0), maxOffset))
     }
 
     /// Index of the column whose span contains `screenX` (for drag-to-reorder).

@@ -213,7 +213,7 @@ struct SetupSettings: View {
                         }
                     }
                 }
-                Text(L("URL scheme: %@", "strip://run/focus-left, strip://layout/grid2x2, strip://restart"))
+                Text(L("URL scheme: %@", "strip://run/focus-left, strip://run/stack-right, strip://restart"))
                     .font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
                 if let automationMessage {
                     Text(automationMessage).font(.caption).textSelection(.enabled)

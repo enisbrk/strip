@@ -124,7 +124,7 @@ final class Minimap {
     /// - Parameters:
     ///   - showMap: false shows only the caption (minimap turned off in Settings).
     ///   - caption: the shortcut just used; nil keeps a recent caption on screen.
-    func show(displayID: CGDirectDisplayID, screen: NSScreen, strip: Strip, preset: LayoutPreset,
+    func show(displayID: CGDirectDisplayID, screen: NSScreen, strip: Strip,
               engine: LayoutEngine, icons: [WindowID: NSImage] = [:], showMap: Bool = true,
               caption: MinimapCaption? = nil) {
         let entry = panels[displayID] ?? makePanel(displayID)
@@ -141,18 +141,13 @@ final class Minimap {
 
         if model.showsMap {
             // Lay the map out large (no wrapping), then scale it down to minimap size.
-            var o = Overview.make(strip: strip, preset: preset, engine: engine,
+            var o = Overview.make(strip: strip, engine: engine,
                                   maxSize: CGSize(width: 100_000, height: 100_000), compact: true)
             o = o.scaled(by: min(Self.maxWidth / o.size.width, Self.maxHeight / o.size.height, 1))
             model.overview = o
             model.icons = icons
             model.focusedIndex = strip.focusedIndex
-            if preset == .strip {
-                model.highlight = o.viewport
-            } else if let f = strip.focusedIndex {
-                let page = engine.page(of: f, preset: preset)
-                model.highlight = o.pages.indices.contains(page) ? o.pages[page].insetBy(dx: -2, dy: -2) : nil
-            }
+            model.highlight = o.viewport
         }
 
         let size = entry.hosting.fittingSize
@@ -239,11 +234,6 @@ struct MinimapView: View {
     private var map: some View {
         let o = model.overview
         return ZStack(alignment: .topLeading) {
-            ForEach(Array(o.pages.enumerated()), id: \.offset) { _, page in
-                RoundedRectangle(cornerRadius: 4, style: .continuous).fill(Color.primary.opacity(0.06))
-                    .frame(width: page.width, height: page.height)
-                    .position(x: page.midX, y: page.midY)
-            }
             ForEach(o.targets, id: \.index) { t in
                 let focused = t.index == model.focusedIndex
                 if t.rows.isEmpty {
