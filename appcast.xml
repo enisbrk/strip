@@ -6,6 +6,15 @@
     <description>Strip updates</description>
     <language>en</language>
     <item>
+      <title>Version 1.2.0</title>
+      <pubDate>Thu, 15 Oct 2026 21:01:17 +0300</pubDate>
+      <sparkle:version>4</sparkle:version>
+      <sparkle:shortVersionString>1.2.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[<p>New Edit strip (⌃⌥O): a ⌘Tab-like glass panel over your bare desktop, each screen a miniature display; drag windows or whole screens, pick with the arrow keys and Return. Each screen now takes a full screen width, so the next screen's windows never peek in. Drag a window to a screen edge or corner to snap it into a half or a quarter. Layout presets were removed: Strip always runs as a strip.</p>]]></description>
+      <enclosure url="https://github.com/enisbrk/strip/releases/download/v1.2.0/Strip-1.2.0.dmg" type="application/octet-stream" sparkle:edSignature="e6nVrPuwTUILNXZ2fKP9vXrsLWx4iQo7sQWqh/jdFQv8kkuLxmQ9ZLYdaxKWgZcAywnU8YTjsxgBb2ghs8IWAQ==" length="7981901"/>
+    </item>
+    <item>
       <title>Version 1.1.1</title>
       <pubDate>Tue, 13 Oct 2026 14:22:57 +0300</pubDate>
       <sparkle:version>3</sparkle:version>
